@@ -69,3 +69,18 @@ a = split_punct(a, punct_marks)
 
 a <- tolower(a)
 
+
+#--------第5步--------
+unique_words <- unique(a) #find the vector of unique words
+
+index_vector <- match(a, unique_words) 
+#Find the index in b corresponding to each word
+#The frequency can be counted by numerical operation
+
+word_occurs_time <- tabulate(index_vector)
+#Count the number of occurrences of each unique word
+
+ranks <- rank(-word_occurs_time)
+#Words with high frequency need to be sorted at the front
+b_top1000 <- b[ranks <= 1000]
+#Extract the top 1000 high-frequency words from b
