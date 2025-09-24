@@ -8,19 +8,76 @@ a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
 open_brackets <- grep("\\[", a)
 a[open_brackets]
 remove = numeric()
+bracket_info =  data.frame(
+  start_index = numeric(),
+  end_index = numeric(),
+  word_count = numeric(),
+  stringsAsFactors = FALSE
+)
 for(i in open_brackets){
   #find the words with ']' in next 100 words
-  j = i + grep("\\]",a[i:(i+100)])[1] - 1 #since that need to modify the correct position of ']'
+  j = i + grep("\\]",a[i:(i+100)])[1] - 1
+  #since that need to modify the correct position of first ']' in the next 100 words
   if(!is.na(j)){
-    remove = c(remove,i:j)
+    remove = c(remove,i:j)#continuously record positions of '[', ']' in the loop
+    
+    word_count <- j - i + 1
+    bracket_info <- rbind(bracket_info, data.frame(
+      start_index = i,
+      end_index = j,
+      word_count = word_count
+    ))
+    #record the number of words in the deleted brackets
+  }
+}   
+#remove the stage direction
+bracket_info#show recorded information of brackets
+a = a[-unique(remove)]#delete repeated index to avoid error
+
+freq_table <- table(bracket_info$word_count)
+mode_count <- as.numeric(names(freq_table)[which.max(freq_table)])
+mode_count
+
+# deal with the unmatched brackets
+remove_unmatched <- numeric()
+
+# 
+remaining_open <- grep("\\[", a)
+if(length(remaining_open) > 0){
+  open_info <- data.frame(
+    bracket_index = remaining_open,
+    bracket_type = "[",
+    stringsAsFactors = FALSE
+  )
+  
+  for(i in remaining_open){
+    # 
+    end_pos <- min(i + mode_count - 1, length(a))
+    remove_unmatched <- c(remove_unmatched, i:end_pos)
   }
 }
-#remove the stage direction
-a = a[-unique(remove)]
+
+# 
+remaining_close <- grep("\\]", a)
+if(length(remaining_close) > 0){
+  close_info <- data.frame(
+    bracket_index = remaining_close,
+    bracket_type = "]",
+    stringsAsFactors = FALSE
+  )
+  
+  for(i in remaining_close){
+    # 
+    start_pos <- max(i - mode_count + 1, 1)
+    remove_unmatched <- c(remove_unmatched, start_pos:i)
+  }
+}
+remove_unmatched
+a <- a[-unique(remove_unmatched)]
+a
 
 
-
-#-------------Remove Uppercase Words and Numerals--------------
+#-------------Remove Uppercase Words and Numerals-------------
 filter_word = function(word_vector){
   uppercase = (toupper(word_vector) == word_vector) &  #Check if a word consists entirely of uppercase letters
        (word_vector != 'I') & (word_vector != 'A') #Except 'I' and 'A'
@@ -70,17 +127,48 @@ a = split_punct(a, punct_marks)
 a <- tolower(a)
 
 
-#--------第5步--------
+#--------5--------
 unique_words <- unique(a) #find the vector of unique words
 
 index_vector <- match(a, unique_words) 
-#Find the index in b corresponding to each word
-#The frequency can be counted by numerical operation
+#Find the index in a corresponding to each word in the unique word vector. The  
 
 word_occurs_time <- tabulate(index_vector)
 #Count the number of occurrences of each unique word
 
 ranks <- rank(-word_occurs_time)
 #Words with high frequency need to be sorted at the front
-b_top1000 <- b[ranks <= 1000]
-#Extract the top 1000 high-frequency words from b
+b <- unique_words[ranks <= 1000] 
+#Extract the top 1000 high-frequency words as vector b
+
+
+#-----------6-----------
+a_token = match(a,b) # generate the vector contains the tokens for representing the whole text
+create_sequence_matrix <- function(a, tokens, mlag) {
+  # 参数检查
+  if (mlag < 1) {
+    stop("mlag should be atleast 1")
+  }
+  
+  n <- length(a)
+  if (n <= mlag) {
+    stop("the text length must be greater than the mlag value")
+  }
+  
+  
+  # Create sequence matrix M
+  # Initialize matrix M, with a size of (n-mlag) × (mlag+1)
+  M <- matrix(NA, nrow = n - mlag, ncol = mlag + 1)
+  
+  # Fill each column of the matrix
+  for (i in 0:mlag) {
+    # The i-th column is the token vector that moves i positions to the right
+    M[, i + 1] <- tokens[(1 + i):(n - mlag + i)]
+  }
+  
+ 
+  
+  return(M)
+}
+M_4 = create_sequence_matrix(a, a_token,4)
+M_4 #sequence matirx with mlag = 4
