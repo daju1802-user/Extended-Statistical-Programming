@@ -230,21 +230,19 @@ next.word = function(key, M, M1, w = rep(1, ncol(M) - 1)){
 
 
 # ----------------------Q8:Choose a single starting word (non punctuation)----------------
-select_start_token <- function(b, M1, specific_word = NULL) {
+#Randomly or specify a starting word
+start_token <- function(b, M1, word = NULL) {
   # b: Vocabulary vector
   # M1: Full text token vector
-  # specific_word: Optional, specify the starting word such as' romeo '
+  # word: Optional, specify the starting word such as' romeo '
   
-  if (!is.null(specific_word)) {
+  if (!is.null(word)) {
     # Use the specified starting word
-    specific_word <- tolower(specific_word)
-    start_token <- which(b == specific_word)
+    word <- tolower(word)
+    start_token <- which(b == word)
     
     if (length(start_token) > 0) {
-      cat("Use specified starting words: '", specific_word, "' (token ", start_token, ")\n", sep = "")
       return(start_token)
-    } else {
-      cat("'", specific_word, "'not in the vocabulary, use random selection\n", sep = "")
     }
   }
   
@@ -256,27 +254,22 @@ select_start_token <- function(b, M1, specific_word = NULL) {
   non_punct_tokens <- valid_tokens[!b[valid_tokens] %in% punctuation]
   
   if (length(non_punct_tokens) > 0) {
-    start_token <- sample(non_punct_tokens, 1)
-    cat("Randomly select starting words: '", b[start_token], "' (token ", start_token, ")\n", sep = "")
-    return(start_token)
+    return(sample(non_punct_tokens, 1))
   } else {
     # If there are no non punctuation words, use any valid words
-    start_token <- sample(valid_tokens, 1)
-    cat("Randomly select starting words: '", b[start_token], "' (token ", start_token, ")\n", sep = "")
-    return(start_token)
+    return(sample(valid_tokens, 1))
   }
 }
 
 # Test for Question 8
-cat("=== Test for Question 8 ===\n")
-start_token1 <- select_start_token(b, a_token)  # randomly select
-start_token2 <- select_start_token(b, a_token, "romeo")  # fixed word
-start_token3 <- select_start_token(b, a_token, "love")   # fixed word
+start_token1 <- start_token(b, a_token)  # randomly select
+start_token2 <- start_token(b, a_token, "romeo")  # fixed word
+start_token3 <- start_token(b, a_token, "love")   # fixed word
 
 
 
 #--------------------- Q9: Generate a complete sentence until encountering a period----------------------
-generate_sentence_until_fullstop <- function(start_token, M, M1, b, w = rep(1, ncol(M) - 1), max_words = 100) {
+make_sentence <- function(start_token, M, M1, b, w = rep(1, ncol(M) - 1), max_len = 100) {
   # Start_token: Starting word token
   # Other parameters are the same as the next. word function
   
@@ -287,19 +280,12 @@ generate_sentence_until_fullstop <- function(start_token, M, M1, b, w = rep(1, n
   generated_tokens <- start_token
   word_count <- 1
   
-  cat("Start generating sentences...\n")
-  cat("Starting words: '", b[start_token], "'\n", sep = "")
-  cat("Generating process:\n", b[start_token])
-  
   # Generate until a period is encountered or the maximum length is reached
-  for (i in 1:max_words) {
+  for (i in 1:max_len) {
     # Generate the next word using the next.word function
     next_token <- next.word(current_sequence, M, M1, w)
     generated_tokens <- c(generated_tokens, next_token)
     word_count <- word_count + 1
-    
-    # Display the generating process
-    cat(" ", b[next_token])
     
     # Update the current sequence (keeping the length within mlag)
     if (length(current_sequence) >= mlag) {
@@ -310,22 +296,13 @@ generate_sentence_until_fullstop <- function(start_token, M, M1, b, w = rep(1, n
     
     # Check if a period has been encountered
     if (b[next_token] == ".") {
-      cat(" [Encounter period, end]\n")
       break
     }
-    
-    # Display line breaks every 10 words
-    if (i %% 10 == 0) cat("\n")
-  }
-  
-  # Check if the maximum length has been reached but no period has been encountered
-  if (b[generated_tokens[length(generated_tokens)]] != ".") {
-    cat(" [Reached maximum length, no period encountered]\n")
   }
   
   # Convert the token vector back to words and beautify the output
-  sentence_words <- b[generated_tokens]
-  sentence <- paste(sentence_words, collapse = " ")
+  words <- b[generated_tokens]
+  sentence <- paste(words, collapse = " ")
   
   # Processing punctuation spaces (removing spaces before punctuation)
   sentence <- gsub("\\s+([,.!?;:])", "\\1", sentence)
@@ -338,7 +315,6 @@ generate_sentence_until_fullstop <- function(start_token, M, M1, b, w = rep(1, n
     sentence <- paste0(sentence, ".")
   }
   
-  cat("Generation completed, ", word_count, "words in total.\n")
   return(list(
     sentence = sentence,
     tokens = generated_tokens,
@@ -347,42 +323,32 @@ generate_sentence_until_fullstop <- function(start_token, M, M1, b, w = rep(1, n
 }
 
 # Complete testing of Question 8 and Question 9
-cat("=== Complete testing for questions 8 and 9 ===\n\n")
-
-
-cat("Question 8: Choose the starting word\n")
-
-
-cat("Method 1: Random selection:\n")
-start_random <- select_start_token(b, a_token)
+#测试代码，需要删掉！！！！！！！！！！！
+print("Method 1: Random selection:")
+start_random <- start_token(b, a_token)
 
 #Method 2: Specify interesting vocabulary
-cat("\nMethod 2- Specify Vocabulary:\n")
-start_romeo <- select_start_token(b, a_token, "romeo")
-start_love <- select_start_token(b, a_token, "love")
-start_king <- select_start_token(b, a_token, "king")
+print("\nMethod 2- Specify Vocabulary:\n")
+start_romeo <- start_token(b, a_token, "romeo")
+start_love <- start_token(b, a_token, "love")
+start_king <- start_token(b, a_token, "king")
 
 # Question 9: Generate sentences
-cat("\nQuestion 9: Generate complete sentences\n")
-
 cat("1. Markov Model Generation:\n")
-
 
 sentences_markov <- list()
 
-cat("Sentence 1 (random start):\n")
-sentence1 <- generate_sentence_until_fullstop(start_random, M, a_token, b)
+print("Sentence 1 (random start):\n")
+sentence1 <- make_sentence(start_random, M, a_token, b)
 cat("Generated sentence:\n", sentence1$sentence, "\n\n")
 sentences_markov[["Random start"]] <- sentence1$sentence
 
 cat("Sentence2 (starting word 'romeo'):\n")
-sentence2 <- generate_sentence_until_fullstop(start_romeo, M, a_token, b)
+sentence2 <- make_sentence(start_romeo, M, a_token, b)
 cat("Generated sentence", sentence2$sentence, "\n\n")
 sentences_markov[["starting word 'romeo'"]] <- sentence2$sentence
 
-cat("Sentence 3 (starting word 'love'):\n")
-sentence3 <- generate_sentence_until_fullstop(start_love, M, a_token, b)
+print("Sentence 3 (starting word 'love'):\n")
+sentence3 <- make_sentence(start_love, M, a_token, b)
 cat("Generated sentence:\n", sentence3$sentence, "\n\n")
 sentences_markov[["Starting word 'love'"]] <- sentence3$sentence
-
-
