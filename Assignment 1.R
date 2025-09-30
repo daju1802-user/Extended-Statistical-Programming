@@ -1,4 +1,4 @@
-setwd("/Users/sxy/Edinburgh/Extended Statstical Programming/Assignment 1")
+#setwd("/Users/sxy/Edinburgh/Extended Statstical Programming/Assignment 1")
 a <- scan("shakespeare.txt",what="character",skip=83,nlines=196043-83,
           fileEncoding="UTF-8")
 
@@ -18,13 +18,6 @@ for(i in open_brackets){
     cat("The position of unmatched brackets:", i, "The text is:", a[i], "\n") 
   }
 }
-
-#Determine what needs to be deleted based on the context
-a[(unmatched_brackets[1]-5):(unmatched_brackets[1]+20)]
-a[(unmatched_brackets[2]-5):(unmatched_brackets[2]+20)] #The left bracket before "So" is redundant and does not need to be deleted.
-
-#add the unmatched bracket content
-remove = sort(c(remove,(unmatched_brackets[1]):(unmatched_brackets[1]+14)))
 
 #remove the stage direction
 a = a[-unique(remove)]
@@ -120,7 +113,7 @@ create_sequence_matrix <- function(a, tokens, mlag) {
     # The i-th column is the token vector that moves i positions to the right
     M[, i + 1] <- tokens[(1 + i):(n - mlag + i)]
   }
-  
+  M <- M[!apply(M, 1, function(row) any(is.na(row))), ] #remove NA in the first and last row
   return(M)
 }
 
