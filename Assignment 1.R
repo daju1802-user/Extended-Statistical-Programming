@@ -113,7 +113,7 @@ create_sequence_matrix <- function(a, tokens, mlag) {
     # The i-th column is the token vector that moves i positions to the right
     M[, i + 1] <- tokens[(1 + i):(n - mlag + i)]
   }
-  M <- M[!apply(M, 1, function(row) any(is.na(row))), ] #remove NA in the first and last row
+  M <- M[!apply(M, 1, function(row) any(is.na(row))), ] #remove NA in the first and last col
   return(M)
 }
 
