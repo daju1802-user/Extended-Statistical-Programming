@@ -111,7 +111,7 @@ create_sequence_matrix <- function(a, tokens, mlag) {
     # The i-th column is the token vector that moves i positions to the right
     M[, i + 1] <- tokens[(1 + i):(n - mlag + i)]
   }
-  
+  M <- M[!apply(M, 1, function(row) any(is.na(row))), ]
   return(M)
 }
 
@@ -384,4 +384,5 @@ cat("Sentence 3 (starting word 'love'):\n")
 sentence3 <- generate_sentence_until_fullstop(start_love, M, a_token, b)
 cat("Generated sentence:\n", sentence3$sentence, "\n\n")
 sentences_markov[["Starting word 'love'"]] <- sentence3$sentence
+
 
