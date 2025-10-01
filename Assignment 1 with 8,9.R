@@ -298,6 +298,8 @@ make_sentence <- function(start_token, M, M1, b, w = rep(1, ncol(M) - 1), max_le
     if (b[next_token] == ".") {
       break
     }
+    # Display line breaks every 10 words
+    if (i %% 10 == 0) cat("\n")
   }
   
   # Convert the token vector back to words and beautify the output
@@ -352,3 +354,4 @@ print("Sentence 3 (starting word 'love'):\n")
 sentence3 <- make_sentence(start_love, M, a_token, b)
 cat("Generated sentence:\n", sentence3$sentence, "\n\n")
 sentences_markov[["Starting word 'love'"]] <- sentence3$sentence
+
