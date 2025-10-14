@@ -379,3 +379,17 @@ compare.scenarios(
   show_beta = TRUE
 )
 
+#In the Full model and Random mixing graphs, beta is random, that is, everyone has different social abilities. 
+#It can be seen that after removing the household and regular network structure, 
+#each person comes into contact with different people every day. 
+#This led to a higher peak in the number of infections, earlier occurrence of infections, 
+#resulting in a wide spread of the epidemic, rapid speed, and a rapid decline in the number of infections. 
+#In contrast, the Full model, due to having a fixed social group and more localized contact, 
+#has a slower spread of the epidemic, a lower overall peak, but a longer duration of the epidemic.
+
+#In the Constant beta and Constant beta+random models, beta is fixed, meaning that everyone's social skills are the same. 
+#In Constant beta+random, without the isolation of families and social networks, the entire population was exposed, 
+#with the highest number of infections, almost affecting the entire population.
+
+#Therefore, the household and regular network structure enables the epidemic to spread rapidly within a small range, 
+#resulting in a high short-term infection peak, but spreads slowly among the entire population and has a short duration of the epidemic.
