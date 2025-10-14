@@ -15,15 +15,14 @@
 
 
 
-#create_households(): 创建家庭结构，将人口分配到随机规模的家庭中
+#get.net(): Constructing social networks based on individual social parameters
 
-#get.net(): 基于个体社交性参数构建社交网络
+#nseir(): Core simulation function, running the SEIR model including social structure
 
-#nseir(): 核心模拟函数，运行包含社会结构的SEIR模型
+#plot.nseir(): Visualize the epidemic development curve
 
-#plot_epidemic_curve(): 可视化疫情发展曲线
+#compare.scenarios(): Comparing models under different conditions
 
-#情景分析: 比较不同社会结构设置对疫情的影响
 
 ##============================================================================================================
 ##---------------Create the vector of integers indicating which household each person belongs to--------------
@@ -108,11 +107,8 @@ nseir = function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2,
   state[initial_infected] = 3
   
   # Storage for daily counts
-  S = numeric(nt + 1)
-  E = numeric(nt + 1)
-  I = numeric(nt + 1)
-  R = numeric(nt + 1)
-  t = 0:nt
+  S = E = I = R = numeric(nt + 1)
+  t = 0:nt                        #It starts from the initial state, so time should start from 0
   
   # Record initial state
   S[1] = sum(state == 1)
@@ -122,13 +118,12 @@ nseir = function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2,
   
   # Simulate epidemic dynamics
   for (day in 1:nt) {
-    
-    new_state = state  # copy current state
-    
+    new_state = state
     # Find individuals in each state
+    susceptible = which(state == 1) 
     infectious = which(state == 3)
     exposed = which(state == 2)
-    susceptible = which(state == 1)
+    
     
     # Process transitions E -> I (exposed become infectious)
     if (length(exposed) > 0) {
@@ -163,7 +158,7 @@ nseir = function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2,
           # Find contacts who are susceptible
           susceptible_contacts = alink[[i]][state[alink[[i]]] == 1]
           if (length(susceptible_contacts) > 0) {
-            infected <- susceptible_contacts[runif(length(susceptible_contacts)) < alpha_c] 
+            infected = susceptible_contacts[runif(length(susceptible_contacts)) < alpha_c] 
             new_state[infected] = 2
           }
         }
@@ -173,7 +168,7 @@ nseir = function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2,
           # Calculate infection probability for each susceptible person
           susceptible_now = which(state == 1)
           if (length(susceptible_now) > 0) {
-            prob <- alpha_r * nc * beta[i] * beta[susceptible_now] / (beta_bar^2 * (n - 1))
+            prob = alpha_r * nc * beta[i] * beta[susceptible_now] / (beta_bar^2 * (n - 1))
             #Find all susceptible people who can be infected by the current infected person i
             infected = susceptible_now[runif(length(susceptible_now)) < prob]
             new_state[infected] = 2
@@ -197,13 +192,190 @@ nseir = function(beta, h, alink, alpha = c(.1, .01, .01), delta = .2,
 }
 
 #test
-beta <- runif(n, 0, 1)
-alink <- get.net(beta, h, nc = 15)
-results <- nseir(beta, h, alink)
+beta = runif(n, 0, 1)
+alink = get.net(beta, h, nc = 15)
+results = nseir(beta, h, alink)
 
 ##============================================================================================================
 ##-----------------------------Create a function to plot the dynamics states----------------------------------
+plot.nseir <- function(nseir_results, main = "SEIR Epidemic Dynamics") {
+  # More detailed plotting with individual panels and summary statistics
+  # nseir_results: list output from nseir function
+  # main: main title for the plot
+  
+  S <- nseir_results$S
+  E <- nseir_results$E
+  I <- nseir_results$I
+  R <- nseir_results$R
+  t <- nseir_results$t
+  beta <- nseir_results$beta  # Extract beta values if available
+  
+  n <- S[1] + E[1] + I[1] + R[1]  # total population
+  
+  # Set up 2x3 plot layout to accommodate beta histogram
+  old_par <- par(mfrow = c(2, 3), mar = c(4, 4, 2, 1))
+  on.exit(par(old_par))
+  
+  # Plot 1: All classes together
+  plot(t, S, type = "l", col = "black", lwd = 2.5, main = main,
+       xlab = "Day", ylab = "Population", ylim = c(0, n))
+  lines(t, E, col = "blue", lwd = 2.5)
+  lines(t, I, col = "red", lwd = 2.5)
+  lines(t, R, col = "green", lwd = 2.5)
+  legend("right", legend = c("S", "E", "I", "R"),
+         col = c("black", "blue", "red", "green"), lwd = 2.5, bty = "n")
+  grid(col = "gray80", lty = "dotted")
+  
+  # Plot 2: Susceptible only
+  plot(t, S, type = "l", col = "black", lwd = 2.5, 
+       main = "Susceptible", xlab = "Day", ylab = "Population")
+  grid(col = "gray80", lty = "dotted")
+  
+  # Plot 3: Infectious only (log scale)
+  plot(t, I, type = "l", col = "red", lwd = 2.5,
+       main = "Infectious", xlab = "Day", ylab = "Population")
+  grid(col = "gray80", lty = "dotted")
+  
+  # Plot 4: Cumulative infections (E + I + R)
+  cumulative_infected <- E + I + R
+  plot(t, cumulative_infected, type = "l", col = "purple", lwd = 2.5,
+       main = "Cumulative Infections(E + I + R)", xlab = "Day", ylab = "Population")
+  grid(col = "gray80", lty = "dotted")
+  
+  # Plot 5: Beta distribution histogram
+  if (!is.null(beta)) {
+    hist(beta, col = "lightblue", main = "Distribution of Beta Values",
+         xlab = "Beta (Sociability)", ylab = "Frequency", border = "white")
+    abline(v = mean(beta), col = "red", lwd = 2, lty = 2)
+    legend("topright", legend = paste("Mean =", round(mean(beta), 4)), 
+           col = "red", lwd = 2, bty = "n")
+    grid(col = "gray80", lty = "dotted")
+  } else {
+    # If no beta values available, show empty plot with message
+    plot(0, 0, type = "n", xlab = "", ylab = "", main = "No Beta Data", axes = FALSE)
+    text(0, 0, "Beta values not available", cex = 1.2)
+  }
+  
+  # Plot 6: Epidemic summary statistics
+  peak_infectious <- max(I)
+  peak_day <- t[which.max(I)]
+  final_size <- R[length(R)]
+  attack_rate <- final_size / n * 100
+  
+  # Create summary plot
+  plot(0, 0, type = "n", xlim = c(0, 1), ylim = c(0, 1), 
+       main = "Epidemic Summary", xlab = "", ylab = "", axes = FALSE)
+  
+  text(0.5, 0.8, paste("Peak Infectious:", round(peak_infectious)), cex = 1.2)
+  text(0.5, 0.6, paste("Peak Day:", peak_day), cex = 1.2)
+  text(0.5, 0.4, paste("Final Size:", round(final_size)), cex = 1.2)
+  text(0.5, 0.2, paste("Attack Rate:", round(attack_rate, 1), "%"), cex = 1.2)
+}
+compare.scenarios <- function(results_list, scenario_names = NULL, main_title = "", 
+                          show_beta = TRUE) {
+  # Compares multiple nseir results in panels side-by-side
+  # by calling plot.nseir for each scenario
+  # results_list: list of nseir outputs
+  # scenario_names: names for each scenario
+  # main_title: overall title for the comparison
+  # show_beta: if TRUE, includes beta distributions in the plots
+  
+  n_scenarios <- length(results_list)
+  
+  # Set default scenario names if not provided
+  if (is.null(scenario_names)) {
+    scenario_names <- paste("Scenario", 1:n_scenarios)
+  }
+  
+  # Set up plot layout - if show_beta, each scenario needs 2 rows (SEIR + beta)
+  # Otherwise just 1 row per scenario
+  n_cols <- n_scenarios  
+  n_rows <- ceiling(n_scenarios / n_cols)
+  
+  if (show_beta && !is.null(results_list[[1]]$beta)) {
+    # Each scenario takes 2 rows: one for SEIR, one for beta
+    n_plot_rows <- n_rows * 2
+    n_plot_cols <- n_cols
+  } else {
+    n_plot_rows <- n_rows
+    n_plot_cols <- n_cols
+  }
+  
+  old_par <- par(mfrow = c(n_plot_rows, n_plot_cols), 
+                 mar = c(5, 2.5, 2, 1),
+                 oma = c(0, 0, 2, 0))
+  on.exit(par(old_par)) # Restore the original par settings
+  
+  # Find global max for consistent y-axis across all scenarios
+  max_pop <- 0
+  for (res in results_list) {
+    max_pop <- max(max_pop, max(res$S, res$E, res$I, res$R))
+  }
+  # Plot beta distributions for each scenario if requested
+  if (show_beta && !is.null(results_list[[1]]$beta)) {
+    for (i in 1:n_scenarios) {
+      res <- results_list[[i]]
+      hist(res$beta, col = "steelblue", border = "white",
+           main = "", xlab = "β", ylab = "Frequency",
+           cex.axis = 0.9, cex.lab = 0.9)
+      grid(col = "gray80", lty = "dotted", lwd = 0.8)
+    }
+  }
+  
+  # Plot SEIR dynamics for each scenario
+  for (i in 1:n_scenarios) {
+    res <- results_list[[i]]
+    
+    # Plot SEIR trajectories
+    plot(res$t, res$S, type = "l", col = "black", lwd = 2.2,
+         main = scenario_names[i], xlab = "Day", ylab = "Population",
+         ylim = c(0, max_pop),
+         cex.axis = 0.9, cex.lab = 0.9, cex.main = 1.0)
+    
+    lines(res$t, res$E, col = "blue", lwd = 2.2)
+    lines(res$t, res$I, col = "red", lwd = 2.2)
+    lines(res$t, res$R, col = "green", lwd = 2.2)
+    
+    grid(col = "gray80", lty = "dotted", lwd = 0.8)
+  }
+  # Add overall legend at bottom
+  par(fig = c(0, 1, 0, 1), oma = c(0, 0, 0, 0), mar = c(0, 0, 0, 0),
+      new = TRUE)
+  plot(0, 0, type = "n", bty = "n", xaxt = "n", yaxt = "n")
+  
+  legend("bottom", ncol = 4,
+         legend = c("Susceptible", "Exposed", "Infectious", "Recovered"),
+         col = c("black", "blue", "red", "green"),
+         lwd = 2.2, bty = "n", cex = 1.0,
+         xpd = TRUE)
+  
+  # Add main title if provided
+  if (main_title != "") {
+    mtext(main_title, outer = TRUE, cex = 1.2, line = 0.5)
+  }
+}
 
 
 
+
+##============================================================================================================
+##-------------------------Setting beta, Use function,Compare scenarios and Visualization---------------------
+beta <- runif(n, 0, 1)
+alink <- get.net(beta, h, nc = 15)
+results1 <- nseir(beta, h, alink, alpha = c(.1, .01, .01))  # Full model
+results2 <- nseir(beta, h, alink, alpha = c(0, 0, 0.04))    # Random mixing only
+results3 <- nseir(rep(mean(beta), n), h, alink, alpha = c(.1, .01, .01))  # Constant beta
+results4 <- nseir(rep(mean(beta), n), h, alink, alpha = c(0, 0, 0.04))    # Constant beta, random only
+
+plot.nseir(results1, main = "Full model")
+plot.nseir(results2, main = "Random mixing only")
+plot.nseir(results3, main = "Constant beta")
+plot.nseir(results4, main = "Constant β + random")
+compare.scenarios(
+  list(results1, results2, results3, results4),
+  scenario_names = c("Full model", "Random mixing", 
+                     "Constant β", "Constant β + random"),
+  main_title = "Effect of Structure on Epidemic Dynamics",
+  show_beta = TRUE
+)
 
