@@ -425,5 +425,5 @@ compare.scenarios(
 #In Constant beta+random, without the isolation of families and social networks, the entire population was exposed, 
 #with the highest number of infections, almost affecting the entire population.
 
-#Therefore, the household and regular network structure enables the epidemic to spread rapidly within a small range, 
-#resulting in a high short-term infection peak, but spreads slowly among the entire population and has a short duration of the epidemic.
+#Therefore, under the influence of the household and regular network structure, the epidemic spread within a small range, 
+#spread slowly among the entire population, and the peak number of infections was relatively low, but the epidemic lasted for a long time.
