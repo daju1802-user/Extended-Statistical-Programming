@@ -388,7 +388,7 @@ compare.scenarios <- function(results_list, scenario_names = NULL, main_title = 
 ##============================================================================================================
 ##---------------Create the vector of integers indicating which household each person belongs to--------------
 set.seed(0)
-n = 1000
+n = 10000
 h_max = 5
 
 #generates household IDs repeated by random household sizes
