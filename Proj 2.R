@@ -13,15 +13,15 @@
 
 
 #Contribution:
-#Xuyi Shi: Established vector h, sorted out details and modeling ideas, and 
+#Xuyi Shi(34%): Established vector h, sorted out details and modeling ideas, and 
 #completed the "get.net" function part, providing ideas for the "nseir" function, 
 #and doing final checks and tests.
 
-#Chi Zhang: Completed the part on the "nseir" function and checked the idea and 
+#Chi Zhang(33%): Completed the part on the "nseir" function and checked the idea and 
 #organization of the function. Discuss ideas and final model comparison with teammates,
 #and added comments, and final checks.
 
-#Jiachen Guang: Completed the drawing part, discussed the problem of comparing models, 
+#Jiachen Guang(33%): Completed the drawing part, discussed the problem of comparing models, 
 #completed the code for this part, and provided subsequent comments through images, doing
 #the final check.
 
@@ -43,34 +43,53 @@
 # No connections are created between people in the same household.
 
 get.net = function(beta, h, nc = 15) {
-  # Creates regular contact network based on sociability parameters
+  # Creates regular contact network based on sociability parameters (OPTIMIZED)
   # beta: vector of sociability parameters for each person
   # h: household assignment vector
   # nc: average number of contacts per person
   # Returns: list where element i contains indices of i's regular contacts
   
-  n = length(beta)  # population size
-  beta_bar = mean(beta)  # mean sociability
+  n = length(beta)
+  beta_bar = mean(beta)
   
-  # Initialize empty contact list for each person
+  # Vectorized approach using expand.grid (faster for moderate n)
+  # Generate all unique pairs (i, j) where i < j
+  pairs = which(lower.tri(matrix(0, n, n)), arr.ind = TRUE)
+  i = pairs[, 1]
+  j = pairs[, 2]
+  
+  # Filter out same-household pairs (vectorized)
+  diff_household <- h[i] != h[j]
+  i = i[diff_household]
+  j = j[diff_household]
+  
+  # Calculate link probabilities (vectorized)
+  probs = nc * beta[i] * beta[j] / (beta_bar^2 * (n - 1))
+  
+  # Determine which links to create (vectorized)
+  link <- runif(length(probs)) < probs
+  
+  # Extract pairs that form links
+  linked_i = i[link]
+  linked_j = j[link]
+  
+  # Build contact list efficiently using split
   contacts = vector("list", n)
   
-  # Loop through all possible pairs (i,j) where i < j to avoid duplicates
-  for (i in 1:(n-1)) {
-    for (j in (i+1):n) {
-      
-      # Skip if i and j are in the same household
-      if (h[i] == h[j]) next
-      
-      # Calculate probability of link between i and j
-      prob = nc * beta[i] * beta[j] / (beta_bar^2 * (n - 1))
-      
-      # Create link with calculated probability
-      if (runif(1) < prob) {
-        # Record link in both directions (undirected network)
-        contacts[[i]] = c(contacts[[i]], j)
-        contacts[[j]] = c(contacts[[j]], i)
-      }
+  # Add links in both directions
+  if (length(linked_i) > 0) {
+    # For each i, collect all j's
+    contacts_i = split(linked_j, linked_i)
+    # For each j, collect all i's
+    contacts_j = split(linked_i, linked_j)
+    
+    # Merge into final contact list
+    for (id in names(contacts_i)) {
+      contacts[[as.integer(id)]] = contacts_i[[id]]
+    }
+    for (id in names(contacts_j)) {
+      idx = as.integer(id)
+      contacts[[idx]] = c(contacts[[idx]], contacts_j[[id]])
     }
   }
   
