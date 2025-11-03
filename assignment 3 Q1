@@ -13,4 +13,11 @@ create_design_matrices <- function(t_death, K = 80) {
   t_min <- min(t_death) - 80  # Go back maximum duration before first death
   t_max <- max(t_death)       # Up to last death day
   t_f <- t_min:t_max          # All time points for infection function
+
+  ## Create B-spline basis matrix (tilde_X)
+  ## Create K+4 evenly spaced knots covering the range of f(t)
+  knots <- seq(t_min, t_max, length.out = K + 4)
+  
+  ## Use splineDesign to create B-spline basis matrix
+  tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
 }
