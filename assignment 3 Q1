@@ -1,0 +1,16 @@
+create_design_matrices <- function(t_death, K = 80) {
+  ## Define infection-to-death probability distribution
+  d <- 1:80
+  edur <- 3.151
+  sdur <- 0.469
+  pd <- dlnorm(d, edur, sdur)
+  pd <- pd / sum(pd)  # Normalize to probability distribution
+  
+  n <- length(t_death)  # Number of death observations
+  
+  ## Determine time range for f(t)
+  ## f(t) needs to cover infections that could lead to observed deaths
+  t_min <- min(t_death) - 80  # Go back maximum duration before first death
+  t_max <- max(t_death)       # Up to last death day
+  t_f <- t_min:t_max          # All time points for infection function
+}
