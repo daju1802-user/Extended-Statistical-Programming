@@ -1,5 +1,7 @@
-create_design_matrices <- function(t_death, K = 80) {
+#This function implements the initial part of the Covid-19 deconvolution model.
+#The goal is to construct the design matrix required for estimation
 
+create_design_matrices <- function(t_death, K = 80) {
 ## Define infection-to-death probability distribution
 d <- 1:80
 edur <- 3.151
@@ -28,41 +30,41 @@ i_vec <- rep(1:n, each = 80)
 j_vec <- rep(1:80, times = n) 
   
 # Only keep valid j: j <= min(29 + i, 80)
-  valid <- j_vec <= pmin(29 + i_vec, 80)
-  i_vec <- i_vec[valid]
-  j_vec <- j_vec[valid]
+valid <- j_vec <= pmin(29 + i_vec, 80)
+i_vec <- i_vec[valid]
+j_vec <- j_vec[valid]
   
-  # Corresponding infection times
-  infection_times <- t_death[i_vec] - j_vec
+# Corresponding infection times
+infection_times <- t_death[i_vec] - j_vec
   
-  # Indices in t_f
-  t_f_idx <- infection_times - t_min + 1  # shift to 1-based index
-  valid_idx <- t_f_idx >= 1 & t_f_idx <= length(t_f)
+# Indices in t_f
+t_f_idx <- infection_times - t_min + 1  # shift to 1-based index
+valid_idx <- t_f_idx >= 1 & t_f_idx <= length(t_f)
   
-  i_vec <- i_vec[valid_idx]
-  j_vec <- j_vec[valid_idx]
-  t_f_idx <- t_f_idx[valid_idx]
+i_vec <- i_vec[valid_idx]
+j_vec <- j_vec[valid_idx]
+t_f_idx <- t_f_idx[valid_idx]
   
-  # Use sparse matrix multiplication for X
-  X <- sparseMatrix(
-    i = i_vec,
-    j = rep(1:K, each = length(i_vec)/K),  # temporary placeholder
-    x = 1,
-    dims = c(n, K)
-  )
+# Use sparse matrix multiplication for X
+X <- sparseMatrix(
+  i = i_vec,
+  j = rep(1:K, each = length(i_vec)/K),  # temporary placeholder
+  x = 1,
+  dims = c(n, K)
+)
   
-  # Actually, build X using crossprod trick
-  # Multiply tilde_X rows by pd[j_vec] and accumulate
-  X <- sparseMatrix(
-    i = rep(i_vec, each = K),
-    j = rep(1:K, times = length(i_vec)),
-    x = as.vector(tilde_X[t_f_idx, ] * pd[j_vec]),
-    dims = c(n, K)
-  )
+# Actually, build X using crossprod trick
+# Multiply tilde_X rows by pd[j_vec] and accumulate
+X <- sparseMatrix(
+  i = rep(i_vec, each = K),
+  j = rep(1:K, times = length(i_vec)),
+  x = as.vector(tilde_X[t_f_idx, ] * pd[j_vec]),
+  dims = c(n, K)
+)
   
-  ## Penalty matrix S (second differences)
-  D <- diff(diag(K), differences = 2)
-  S <- crossprod(D)
+## Penalty matrix S (second differences)
+D <- diff(diag(K), differences = 2)
+S <- crossprod(D)
   
 ## Return all matrices
 return(list(
