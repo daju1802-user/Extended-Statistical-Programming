@@ -20,7 +20,7 @@
 ##    Penalizes roughness in β, encouraging smooth f(t).
 
 create_design_matrices <- function(t_death, K = 80) {
-## Define infection-to-death probability distribution
+# Define infection-to-death probability distribution
 d <- 1:80
 edur <- 3.151
 sdur <- 0.469
@@ -29,25 +29,25 @@ pd <- pd / sum(pd)  # Normalize to probability distribution
   
 n <- length(t_death)  # Number of death observations
   
-## Determine time range for f(t)
-## f(t) needs to cover infections that could lead to observed deaths
+# Determine time range for f(t)
+# f(t) needs to cover infections that could lead to observed deaths
 t_min <- min(t_death) - 80  # Go back maximum duration before first death
 t_max <- max(t_death)       # Up to last death day
 t_f <- t_min:t_max          # All time points for infection function
 
-## Create B-spline basis matrix (tilde_X)
-## Create K+4 evenly spaced knots covering the range of f(t)
+# Create B-spline basis matrix tilde_X
+# Create K+4 evenly spaced knots covering the range of f(t)
 knots <- seq(t_min, t_max, length.out = K + 4)
   
-## Use splineDesign to create B-spline basis matrix
+# Use splineDesign to create B-spline basis matrix
 tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
 
-## Create design matrix X for death model
+# Create design matrix X for death model
 # Create matrix of all possible (i,j) combinations
 i_vec <- rep(1:n, each = 80)
 j_vec <- rep(1:80, times = n) 
   
-# Only keep valid j: j <= min(29 + i, 80)
+# Only keep valid durations j for each death day i
 valid <- j_vec <= pmin(29 + i_vec, 80)
 i_vec <- i_vec[valid]
 j_vec <- j_vec[valid]
@@ -56,35 +56,28 @@ j_vec <- j_vec[valid]
 infection_times <- t_death[i_vec] - j_vec
   
 # Indices in t_f
-t_f_idx <- infection_times - t_min + 1  # shift to 1-based index
+t_f_idx <- infection_times - t_min + 1  # Shift to 1-based index
 valid_idx <- t_f_idx >= 1 & t_f_idx <= length(t_f)
-  
+
+# Only keep indices that are valid
 i_vec <- i_vec[valid_idx]
 j_vec <- j_vec[valid_idx]
 t_f_idx <- t_f_idx[valid_idx]
   
-# Use sparse matrix multiplication for X
-X <- sparseMatrix(
-  i = i_vec,
-  j = rep(1:K, each = length(i_vec)/K),  # temporary placeholder
-  x = 1,
-  dims = c(n, K)
-)
-  
-# Actually, build X using crossprod trick
-# Multiply tilde_X rows by pd[j_vec] and accumulate
+# Build sparse matrix X
+# Each row is a death observation
+# Each column is a B-spline coefficient
+# Multiply the corresponding tilde_X row by the infection-to-death probability
 X <- sparseMatrix(
   i = rep(i_vec, each = K),
   j = rep(1:K, times = length(i_vec)),
-  x = as.vector(tilde_X[t_f_idx, ] * pd[j_vec]),
+  x = as.vector(tilde_X[t_f_idx, ] * pd[j_vec]), # Weighted contribution
   dims = c(n, K)
 )
   
-## Penalty matrix S (second differences)
+# Construct penalty matrix S for smoothing
 D <- diff(diag(K), differences = 2)
 S <- crossprod(D)
-  
-## Return all matrices
 return(list(
   tilde_X = tilde_X,
   X = X,
