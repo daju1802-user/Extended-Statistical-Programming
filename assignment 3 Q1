@@ -23,47 +23,46 @@ knots <- seq(t_min, t_max, length.out = K + 4)
 tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
 
 ## Create design matrix X for death model
-## Model: μ_i = sum_{j=1}^{min(29+i,80)} f(t_i - j) * π(j)
-  
 # Create matrix of all possible (i,j) combinations
-i_vec <- 1:n
-j_max <- pmin(29 + i_vec, 80)  # Maximum j for each i
+i_vec <- rep(1:n, each = 80)
+j_vec <- rep(1:80, times = n) 
   
-# Create all valid (i,j) pairs using vectorized operations
-ij_pairs <- do.call(rbind, lapply(i_vec, function(i) {
-  j_vals <- 1:j_max[i]
-  cbind(i = i, j = j_vals)
-}))
+# Only keep valid j: j <= min(29 + i, 80)
+  valid <- j_vec <= pmin(29 + i_vec, 80)
+  i_vec <- i_vec[valid]
+  j_vec <- j_vec[valid]
   
-# Calculate corresponding infection times for each (i,j) pair
-infection_times <- t_death[ij_pairs[, "i"]] - ij_pairs[, "j"]
+  # Corresponding infection times
+  infection_times <- t_death[i_vec] - j_vec
   
-# Find indices in t_f for these infection times
-t_f_idx <- match(infection_times, t_f)
+  # Indices in t_f
+  t_f_idx <- infection_times - t_min + 1  # shift to 1-based index
+  valid_idx <- t_f_idx >= 1 & t_f_idx <= length(t_f)
   
-# Create sparse representation of X matrix
-valid_idx <- !is.na(t_f_idx)  # Only keep valid indices
+  i_vec <- i_vec[valid_idx]
+  j_vec <- j_vec[valid_idx]
+  t_f_idx <- t_f_idx[valid_idx]
   
-# Build X matrix using sparse matrix operations
-X <- matrix(0, nrow = n, ncol = K)
+  # Use sparse matrix multiplication for X
+  X <- sparseMatrix(
+    i = i_vec,
+    j = rep(1:K, each = length(i_vec)/K),  # temporary placeholder
+    x = 1,
+    dims = c(n, K)
+  )
   
-# Use vectorized assignment - this is the key vectorization
-i_idx <- ij_pairs[valid_idx, "i"]
-col_idx <- rep(1:K, each = sum(valid_idx)/K)  # Assumes equal distribution
-prob_vals <- pd[ij_pairs[valid_idx, "j"]]
+  # Actually, build X using crossprod trick
+  # Multiply tilde_X rows by pd[j_vec] and accumulate
+  X <- sparseMatrix(
+    i = rep(i_vec, each = K),
+    j = rep(1:K, times = length(i_vec)),
+    x = as.vector(tilde_X[t_f_idx, ] * pd[j_vec]),
+    dims = c(n, K)
+  )
   
-# Vectorized assignment to X matrix
-for (idx in 1:length(i_idx)) {
-  X[i_idx[idx], ] <- X[i_idx[idx], ] + tilde_X[t_f_idx[valid_idx][idx], ] * prob_vals[idx]
-}
-## Create penalty matrix S
-## Penalty: P = λ * sum_{k=2}^{K-1} (β_{k-1} - 2β_k + β_{k+1})^2 / 2
-## This equals P = λ * β^T S β / 2 where S = D^T D
-## and D is the second difference matrix
-  
-# Create second difference matrix using vectorized diff
-D <- diff(diag(K), differences = 2)
-S <- crossprod(D)  # S = D^T D
+  ## Penalty matrix S (second differences)
+  D <- diff(diag(K), differences = 2)
+  S <- crossprod(D)
   
 ## Return all matrices
 return(list(
