@@ -20,4 +20,39 @@ create_design_matrices <- function(t_death, K = 80) {
   
   ## Use splineDesign to create B-spline basis matrix
   tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
+
+  ## Create design matrix X for death model
+  ## Model: μ_i = sum_{j=1}^{min(29+i,80)} f(t_i - j) * π(j)
+  
+  # Create matrix of all possible (i,j) combinations
+  i_vec <- 1:n
+  j_max <- pmin(29 + i_vec, 80)  # Maximum j for each i
+  
+  # Create all valid (i,j) pairs using vectorized operations
+  ij_pairs <- do.call(rbind, lapply(i_vec, function(i) {
+    j_vals <- 1:j_max[i]
+    cbind(i = i, j = j_vals)
+  }))
+  
+  # Calculate corresponding infection times for each (i,j) pair
+  infection_times <- t_death[ij_pairs[, "i"]] - ij_pairs[, "j"]
+  
+  # Find indices in t_f for these infection times
+  t_f_idx <- match(infection_times, t_f)
+  
+  # Create sparse representation of X matrix
+  valid_idx <- !is.na(t_f_idx)  # Only keep valid indices
+  
+  # Build X matrix using sparse matrix operations
+  X <- matrix(0, nrow = n, ncol = K)
+  
+  # Use vectorized assignment - this is the key vectorization
+  i_idx <- ij_pairs[valid_idx, "i"]
+  col_idx <- rep(1:K, each = sum(valid_idx)/K)  # Assumes equal distribution
+  prob_vals <- pd[ij_pairs[valid_idx, "j"]]
+  
+  # Vectorized assignment to X matrix
+  for (idx in 1:length(i_idx)) {
+    X[i_idx[idx], ] <- X[i_idx[idx], ] + tilde_X[t_f_idx[valid_idx][idx], ] * prob_vals[idx]
+  }
 }
