@@ -86,3 +86,21 @@ return(list(
   pd = pd
 ))
 }
+
+
+
+penalized_nll <- function(gamma, y, X, S, lambda) {
+  beta <- exp(gamma)                # ensure positivity of β
+  mu <- as.vector(X %*% beta)       # mean μ = Xβ
+  
+  # avoid log(0)
+  mu[mu <= 1e-12] <- 1e-12
+  
+  # negative log-likelihood (drop log(y!) term)
+  nll <- sum(mu - y * log(mu))
+  
+  # add smoothness penalty term
+  penalty <- 0.5 * lambda * crossprod(beta, S %*% beta)
+  
+  return(nll + penalty)
+}
