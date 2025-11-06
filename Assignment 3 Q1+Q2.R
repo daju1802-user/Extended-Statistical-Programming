@@ -108,3 +108,24 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
   return(grad)
 }
 
+# ---- Finite differencing test ----
+# Choose initial gamma
+gamma0 <- rep(0, ncol(mats$X))
+lambda <- 5e-5
+
+# Analytical gradient
+g_analytical <- penalized_grad(gamma0, y, mats$X, mats$S, lambda)
+
+# Numerical gradient (finite differencing)
+eps <- 1e-6
+g_numeric <- sapply(1:length(gamma0), function(k) {
+  gp <- gamma0; gp[k] <- gp[k] + eps
+  gm <- gamma0; gm[k] <- gm[k] - eps
+  (penalized_nll(gp, y, mats$X, mats$S, lambda) -
+      penalized_nll(gm, y, mats$X, mats$S, lambda)) / (2 * eps)
+})
+
+# Compare
+diff <- max(abs(g_analytical - g_numeric))
+cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+
