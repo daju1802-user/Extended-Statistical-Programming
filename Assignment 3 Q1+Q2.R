@@ -10,7 +10,7 @@
 ## 2. Constructs the B-spline basis matrix tilde_X for f(t):
 ##    K + 4 evenly spaced knots are used.
 ##    The middle K-2 knots cover the interval over which f(t) is evaluated.
-## 3. Constructs the design matrix X for μ_i:
+## 3. Constructs the design matrix X for mu_i:
 ##    Each row corresponds to one observed death day t_i.
 ##    Each column corresponds to a B-spline coefficient beta_k.
 ##    Each mu_i is computed as a weighted sum of the basis functions
@@ -32,7 +32,6 @@ create_design_matrices <- function(t_death, K = 80) {
   pd <- pd / sum(pd)  # Normalize to probability distribution
   
   n <- length(t_death)  # Number of death observations
-  
   ## Determine time range for f(t)
   ## f(t) needs to cover infections that could lead to observed deaths
   t_min <- min(t_death) - 80  # Go back maximum duration before first death
@@ -42,8 +41,6 @@ create_design_matrices <- function(t_death, K = 80) {
   ## Create B-spline basis matrix tilde_X
   ## Create K+4 evenly spaced knots covering the range of f(t)
   knots <- seq(t_min, t_max, length.out = K + 4)
-  
-  ## Use splineDesign to create B-spline basis matrix
   tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
   
   ## Create design matrix X for death model
@@ -53,14 +50,14 @@ create_design_matrices <- function(t_death, K = 80) {
   
   # Corresponding infection times
   infection_times <- t_death[i_vec] - j_vec
-  t_f_idx <- match(infection_times, t_f)
+  t_f_idx <- match(infection_times, t_f)  # Find the row index corresponding to these infection times in t_f
   # Weighted tilde_X rows by probability
   weighted_rows <- tilde_X[t_f_idx, , drop = FALSE] * pd[j_vec]
   
-  # Sum by death index (rowsum combines rows with same i)
+  # Add the weighted basis function rows belonging to the same death date i
   X <- rowsum(weighted_rows, group = i_vec)
   
-  ## Penalty matrix S (second differences)
+  ## Penalty matrix S 
   D <- diff(diag(K), differences = 2)
   S <- crossprod(D)
   
@@ -110,3 +107,4 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
   grad <- as.vector(beta * (grad_ll + grad_pen))
   return(grad)
 }
+
