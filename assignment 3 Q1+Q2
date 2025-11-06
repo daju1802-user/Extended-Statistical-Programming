@@ -104,3 +104,20 @@ penalized_nll <- function(gamma, y, X, S, lambda) {
   
   return(nll + penalty)
 }
+
+
+penalized_grad <- function(gamma, y, X, S, lambda) {
+  beta <- exp(gamma)
+  mu <- as.vector(X %*% beta)
+  mu[mu <= 1e-12] <- 1e-12
+  
+  # gradient of log-likelihood part
+  grad_ll <- t(X) %*% (1 - y / mu)
+  
+  # gradient of penalty part
+  grad_pen <- lambda * (S %*% beta)
+  
+  # chain rule: ∂/∂γ = diag(β) * (...)
+  grad <- as.vector(beta * (grad_ll + grad_pen))
+  return(grad)
+}
