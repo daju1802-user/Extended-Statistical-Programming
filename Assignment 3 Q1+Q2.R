@@ -1,29 +1,13 @@
-##This function implements the initial part of the Covid-19 deconvolution model.
-##The goal is to construct the design matrix required for estimation
-##the design matrices needed to estimate the daily infection curve f(t) 
-## Observed deaths t_death and infection-to-death distribution π(d) are given.
-## The model assumes a Poisson likelihood
-## The infection curve f(t) is assumed to be smooth, and represented using a B-spline.
-## The function performs the following:
-## 1. Defines the infection-to-death probability distribution π(d)
-##    for durations d = 1:80 days using a lognormal distribution
-## 2. Constructs the B-spline basis matrix tilde_X for f(t):
-##    K + 4 evenly spaced knots are used.
-##    The middle K-2 knots cover the interval over which f(t) is evaluated.
-## 3. Constructs the design matrix X for mu_i:
-##    Each row corresponds to one observed death day t_i.
-##    Each column corresponds to a B-spline coefficient beta_k.
-##    Each mu_i is computed as a weighted sum of the basis functions
-##    evaluated at the infection times t_i - j, weighted by p(j).
-## 4. Computes the smoothing penalty matrix S:
-##    S = t(D) %*% D, where D is the second-difference matrix.
-##    Penalizes roughness in beta, encouraging smooth f(t).
-
 data <- read.table("engcov.txt", header = TRUE)
 t_death <- data$julian
 y <- data$nhs
 
 create_design_matrices <- function(t_death, K = 80) {
+## The goal is to construct the design matrix required for estimation
+## the design matrices needed to estimate the daily infection curve f(t) 
+## Observed deaths t_death and infection-to-death distribution π(d) are given.
+## The model assumes a Poisson likelihood
+## The infection curve f(t) is assumed to be smooth, and represented using a B-spline.
   ## Define infection-to-death probability distribution
   d <- 1:80
   edur <- 3.151
@@ -71,14 +55,12 @@ create_design_matrices <- function(t_death, K = 80) {
   ))
 }
 
-
-##This function computes the penalized negative log-likelihood and its gradient 
-##for the Poisson deconvolution model used to estimate the daily infection curve f(t).
-##The model assumes that observed daily deaths y_i follow a Poisson distribution
-##A smoothness penalty on beta is included to control overfitting.
-##The functions are designed for use with 'optim' for numerical optimization.
-
 penalized_nll <- function(gamma, y, X, S, lambda) {
+## Computes the penalized negative log-likelihood and its gradient 
+## for the Poisson deconvolution model used to estimate the daily infection curve f(t).
+## The model assumes that observed daily deaths y_i follow a Poisson distribution
+## A smoothness penalty on beta is included to control overfitting.
+## The functions are designed for use with 'optim' for numerical optimization.
   beta <- exp(gamma)  # ensure positivity of beta
   mu <- as.vector(X %*% beta)  # Compute expected mean number of deaths under the model
   mu[mu <= 1e-12] <- 1e-12   # Avoid log(0)
@@ -125,5 +107,6 @@ g_numeric <- sapply(1:length(gamma0), function(k) {
 # Compare
 diff <- max(abs(g_analytical - g_numeric))
 cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+
 
 
