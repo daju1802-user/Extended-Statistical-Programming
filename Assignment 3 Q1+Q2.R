@@ -5,7 +5,6 @@ y <- data$nhs
 create_design_matrices <- function(t_death, K = 80) {
 ## The goal is to construct the design matrix required for estimation
 ## the design matrices needed to estimate the daily infection curve f(t) 
-## Observed deaths t_death and infection-to-death distribution π(d) are given.
 ## The model assumes a Poisson likelihood
 ## The infection curve f(t) is assumed to be smooth, and represented using a B-spline.
   ## Define infection-to-death probability distribution
@@ -107,6 +106,7 @@ g_numeric <- sapply(1:length(gamma0), function(k) {
 # Compare
 diff <- max(abs(g_analytical - g_numeric))
 cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+
 
 
 
