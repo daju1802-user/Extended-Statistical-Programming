@@ -1,3 +1,4 @@
+library(splines)
 data <- read.table("engcov.txt", header = TRUE)
 t_death <- data$julian
 y <- data$nhs
@@ -106,6 +107,7 @@ g_numeric <- sapply(1:length(gamma0), function(k) {
 # Compare
 diff <- max(abs(g_analytical - g_numeric))
 cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+
 
 
 
