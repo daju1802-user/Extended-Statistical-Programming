@@ -88,20 +88,22 @@ return(list(
 }
 
 
+##This function computes the penalized negative log-likelihood and its gradient 
+##for the Poisson deconvolution model used to estimate the daily infection curve f(t).
+##The model assumes that observed daily deaths y_i follow a Poisson distribution
+##A smoothness penalty on beta is included to control overfitting.
+##The functions are designed for use with 'optim' for numerical optimization.
 
 penalized_nll <- function(gamma, y, X, S, lambda) {
-  beta <- exp(gamma)                # ensure positivity of β
-  mu <- as.vector(X %*% beta)       # mean μ = Xβ
+  beta <- exp(gamma)  # ensure positivity of beta
+  mu <- as.vector(X %*% beta)   
+  mu[mu <= 1e-12] <- 1e-12   # avoid log(0)
   
-  # avoid log(0)
-  mu[mu <= 1e-12] <- 1e-12
-  
-  # negative log-likelihood (drop log(y!) term)
+  # negative log-likelihood
   nll <- sum(mu - y * log(mu))
   
   # add smoothness penalty term
   penalty <- 0.5 * lambda * crossprod(beta, S %*% beta)
-  
   return(nll + penalty)
 }
 
@@ -117,7 +119,7 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
   # gradient of penalty part
   grad_pen <- lambda * (S %*% beta)
   
-  # chain rule: ∂/∂γ = diag(β) * (...)
+  # chain rule
   grad <- as.vector(beta * (grad_ll + grad_pen))
   return(grad)
 }
