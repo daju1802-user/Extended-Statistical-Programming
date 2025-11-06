@@ -80,13 +80,14 @@ create_design_matrices <- function(t_death, K = 80) {
 
 penalized_nll <- function(gamma, y, X, S, lambda) {
   beta <- exp(gamma)  # ensure positivity of beta
-  mu <- as.vector(X %*% beta)   
-  mu[mu <= 1e-12] <- 1e-12   # avoid log(0)
+  mu <- as.vector(X %*% beta)  # Compute expected mean number of deaths under the model
+  mu[mu <= 1e-12] <- 1e-12   # Avoid log(0)
   
-  # negative log-likelihood
+  # Negative log-likelihood
+  # Ignoring constants (log(y!)) because it is do not depend on parameters
   nll <- sum(mu - y * log(mu))
   
-  # add smoothness penalty term
+  # Add smoothness penalty term
   penalty <- 0.5 * lambda * crossprod(beta, S %*% beta)
   return(nll + penalty)
 }
@@ -97,14 +98,10 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
   mu <- as.vector(X %*% beta)
   mu[mu <= 1e-12] <- 1e-12
   
-  # gradient of log-likelihood part
-  grad_ll <- t(X) %*% (1 - y / mu)
+  grad_ll <- t(X) %*% (1 - y / mu)  # Gradient log-likelihood
+  grad_pen <- lambda * (S %*% beta)  # Gradient penalty
   
-  # gradient of penalty part
-  grad_pen <- lambda * (S %*% beta)
-  
-  # chain rule
-  grad <- as.vector(beta * (grad_ll + grad_pen))
+  grad <- as.vector(beta * (grad_ll + grad_pen))  # Chain rule
   return(grad)
 }
 
@@ -128,4 +125,5 @@ g_numeric <- sapply(1:length(gamma0), function(k) {
 # Compare
 diff <- max(abs(g_analytical - g_numeric))
 cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+
 
