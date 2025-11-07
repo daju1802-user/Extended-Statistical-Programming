@@ -110,5 +110,43 @@ cat("Maximum absolute difference between analytic and numeric gradients:", diff,
 
 
 
+#Q3
+## ---- Prepare data and matrices ----
+mats <- create_design_matrices(t_death, K = 80)
+gamma0 <- rep(0, ncol(mats$X))
+lambda <- 5e-5
+
+## ---- Optimize penalized likelihood ----
+fit <- optim(
+  par = gamma0,
+  fn = penalized_nll,
+  gr = penalized_grad,
+  y = y, X = mats$X, S = mats$S, lambda = lambda,
+  method = "BFGS",
+  control = list(maxit = 2000, trace = 1)
+)
+
+## ---- Extract fitted parameters ----
+gamma_hat <- fit$par
+beta_hat <- exp(gamma_hat)
+mu_hat <- as.vector(mats$X %*% beta_hat)  # fitted daily deaths
+f_hat <- as.vector(mats$tilde_X %*% beta_hat)  # estimated infection curve
+
+## ---- Plot actual vs fitted daily deaths ----
+plot(t_death, y, type = "p", pch = 16, col = "grey40",
+     main = "Actual vs Fitted Daily Deaths",
+     xlab = "Day (Julian date)", ylab = "Daily deaths")
+lines(t_death, mu_hat, col = "red", lwd = 2)
+legend("topright", legend = c("Observed deaths", "Fitted deaths"),
+       col = c("grey40", "red"), lwd = c(NA, 2), pch = c(16, NA), bty = "n")
+
+## ---- Plot estimated daily infection curve ----
+plot(mats$t_f, f_hat, type = "l", col = "blue", lwd = 2,
+     main = "Estimated Daily Infection Curve f(t)",
+     xlab = "Day (Julian date)", ylab = "Estimated infections")
+
+## add vertical line to show where death data starts
+abline(v = min(t_death), lty = 2, col = "grey60")
+text(min(t_death), max(f_hat)*0.9, "Deaths start", pos = 4, cex = 0.8)
 
 
