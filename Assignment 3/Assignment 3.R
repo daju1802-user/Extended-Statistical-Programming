@@ -150,3 +150,10 @@ abline(v = min(t_death), lty = 2, col = "grey60")
 text(min(t_death), max(f_hat)*0.9, "Deaths start", pos = 4, cex = 0.8)
 
 
+
+## ---- Q4: Grid search for optimal lambda  ----
+
+n <- length(y)
+log_lambda_seq <- seq(-13, -7, length.out = 50)
+lambda_seq <- exp(log_lambda_seq)
+gamma_init <- rep(0, ncol(mats$X))
