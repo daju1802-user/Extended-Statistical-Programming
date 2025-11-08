@@ -157,3 +157,15 @@ n <- length(y)
 log_lambda_seq <- seq(-13, -7, length.out = 50)
 lambda_seq <- exp(log_lambda_seq)
 gamma_init <- rep(0, ncol(mats$X))
+
+## Define helper function for one λ
+compute_BIC_for_lambda <- function(lambda) {
+  # Fit penalized Poisson model
+  fit <- optim(
+    par = gamma_init,
+    fn = penalized_nll,
+    gr = penalized_grad,
+    y = y, X = mats$X, S = mats$S, lambda = lambda,
+    method = "BFGS",
+    control = list(maxit = 1000, trace = 0)
+  )
