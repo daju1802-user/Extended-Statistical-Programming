@@ -155,14 +155,36 @@ lambda_seq <- exp(log_lambda_seq)
 gamma_init <- rep(0, ncol(mats$X))
 
 ## Define helper function for one λ
-compute_BIC_for_lambda <- function(lambda) {
-  # Fit penalized Poisson model
-  fit <- optim(
-    par = gamma_init,
-    fn = penalized_nll,
-    gr = penalized_grad,
-    y = y, X = mats$X, S = mats$S, lambda = lambda,
-    method = "BFGS",
-    control = list(maxit = 1000, trace = 0)
-  )
+# Function to calculate BIC
+calc_bic <- function(gamma, lambda, X, y, S) {
+  beta <- exp(gamma)
+  mu <- as.vector(X %*% beta)
+  
+  # Log-likelihood (without penalty)
+  ll <- sum(y * log(mu) - mu)
+  
+  # Calculate Hessian matrices for EDF
+  # H_lambda = X^T * W * X + lambda * S, where W = diag(y/mu^2)
+  W <- diag(as.vector(y / mu^2))
+  H_0 <- crossprod(X, X * w)
+  H_lambda <- H_0 + lambda * S
+  
+  # Effective degrees of freedom
+  EDF <- sum(diag(solve(H_lambda) %*% H_0))
+  
+  cholH <- try(chol(H_lambda), silent = TRUE)
+  if (inherits(cholH, "try-error")) {
+    # Rollback plan
+    EDF <- sum(diag(solve(H_lambda, H_0)))
+  } else {
+    # Avoid matrix inversion by using a two-step triangular decomposition method.
+    Z <- backsolve(cholH, forwardsolve(t(cholH), H_0))
+    EDF <- sum(diag(Z))
+  }
+  
+  # BIC
+  BIC <- -2 * ll + log(n) * EDF
+  
+  list(BIC = BIC, EDF = EDF, ll = ll)
+}
 
