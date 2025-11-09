@@ -89,6 +89,7 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
 
 # ---- Finite differencing test ----
 # Choose initial gamma
+mats <- create_design_matrices(t_death, K = 80)
 gamma0 <- rep(0, ncol(mats$X))
 lambda <- 5e-5
 
@@ -111,11 +112,6 @@ cat("Maximum absolute difference between analytic and numeric gradients:", diff,
 
 
 #Q3
-## ---- Prepare data and matrices ----
-mats <- create_design_matrices(t_death, K = 80)
-gamma0 <- rep(0, ncol(mats$X))
-lambda <- 5e-5
-
 ## ---- Optimize penalized likelihood ----
 fit <- optim(
   par = gamma0,
@@ -169,3 +165,4 @@ compute_BIC_for_lambda <- function(lambda) {
     method = "BFGS",
     control = list(maxit = 1000, trace = 0)
   )
+
