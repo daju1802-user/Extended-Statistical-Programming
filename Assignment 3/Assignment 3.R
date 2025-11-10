@@ -1,59 +1,50 @@
 library(splines)
 data <- read.table("engcov.txt", header = TRUE)
-t_death <- data$julian
+t <- data$julian  # Day of year
+n <- length(y)  # Number of observations
 y <- data$nhs
+d <- 1:80
+edur <- 3.151
+sdur <- 0.469
+pd <- dlnorm(d, edur, sdur)
+pd <- pd / sum(pd)  # Normalize to probability distribution
+K <- 80  # Number of basis functions
 
-create_design_matrices <- function(t_death, K = 80) {
-## The goal is to construct the design matrix required for estimation
-## the design matrices needed to estimate the daily infection curve f(t) 
-## The model assumes a Poisson likelihood
-## The infection curve f(t) is assumed to be smooth, and represented using a B-spline.
-  ## Define infection-to-death probability distribution
-  d <- 1:80
-  edur <- 3.151
-  sdur <- 0.469
-  pd <- dlnorm(d, edur, sdur)
-  pd <- pd / sum(pd)  # Normalize to probability distribution
+build_matrices <- function(t,k,pd){
+  lower <- min(t) - 30
+  upper <- max(t)
+  mid_squence <- seq(lower, upper, length.out = k-2)
+  gap <- mid_squence[2] - mid_squence[1]
+  knot <- c(
+    seq(from = lower - 3*gap, to = lower - gap, length.out = 3),
+    mid_squence,
+    seq(from = upper + gap, to = upper + 3*gap, length.out = 3)
+  )
+
+  X_tilde <- splineDesign(knot,lower:upper,outer.ok = TRUE) #outer.ok = TRUE
   
-  n <- length(t_death)  # Number of death observations
-  ## Determine time range for f(t)
-  ## f(t) needs to cover infections that could lead to observed deaths
-  t_min <- min(t_death) - 80  # Go back maximum duration before first death
-  t_max <- max(t_death)       # Up to last death day
-  t_f <- t_min:t_max          # All time points for infection function
-  
-  ## Create B-spline basis matrix tilde_X
-  ## Create K+4 evenly spaced knots covering the range of f(t)
-  knots <- seq(t_min, t_max, length.out = K + 4)
-  tilde_X <- splineDesign(knots = knots, x = t_f, outer.ok = TRUE)
-  
-  ## Create design matrix X for death model
-  # Create matrix of all possible (i,j) combinations
-  i_vec <- rep(1:n, times = pmin(29 + 1:n, 80))
-  j_vec <- unlist(lapply(1:n, function(i) 1:pmin(29 + i, 80))) 
-  
-  # Corresponding infection times
-  infection_times <- t_death[i_vec] - j_vec
-  t_f_idx <- match(infection_times, t_f)  # Find the row index corresponding to these infection times in t_f
-  # Weighted tilde_X rows by probability
-  weighted_rows <- tilde_X[t_f_idx, , drop = FALSE] * pd[j_vec]
-  
-  # Add the weighted basis function rows belonging to the same death date i
-  X <- rowsum(weighted_rows, group = i_vec)
-  
-  ## Penalty matrix S 
-  D <- diff(diag(K), differences = 2)
-  S <- crossprod(D)
-  
-  ## Return all matrices
-  return(list(
-    tilde_X = tilde_X,
-    X = X,
-    S = S,
-    t_f = t_f,
-    pd = pd
-  ))
+  r <- nrow(X_tilde)
+
+  X <- matrix(0, n, ncol(X_tilde))
+  # Build X by convolution
+  for (i in 1:n) {
+    max_j <- min(29 + i, length(pd))
+    idx <- t[i] - (1:max_j) - lower + 1
+    valid <- which(idx >= 1 & idx <= r)
+    if (length(valid) > 0) {
+      X[i, ] <- colSums(X_tilde[idx[valid], , drop = FALSE] * pd[valid])
+    }
+  }
+
+  S <- crossprod(diff(diag(k),diff=2))
+  return(list(X_tilde=X_tilde,S=S,X=X,t_infection = lower:upper))
 }
+
+mats <- build_matrices(t,k = 80, pd)
+X <- mats$X
+X_tilde <- mats$X_tilde
+S <- mats$S
+head(X)
 
 penalized_nll <- function(gamma, y, X, S, lambda) {
 ## Computes the penalized negative log-likelihood and its gradient 
@@ -187,4 +178,5 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
