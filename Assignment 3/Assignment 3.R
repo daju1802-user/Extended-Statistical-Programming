@@ -46,7 +46,7 @@ X_tilde <- mats$X_tilde
 S <- mats$S
 head(X)
 
-penalized_nll <- function(gamma, y, X, S, lambda) {
+pnll <- function(gamma, y, X, S, lambda) {
 ## Computes the penalized negative log-likelihood and its gradient 
 ## for the Poisson deconvolution model used to estimate the daily infection curve f(t).
 ## The model assumes that observed daily deaths y_i follow a Poisson distribution
@@ -54,15 +54,14 @@ penalized_nll <- function(gamma, y, X, S, lambda) {
 ## The functions are designed for use with 'optim' for numerical optimization.
   beta <- exp(gamma)  # ensure positivity of beta
   mu <- as.vector(X %*% beta)  # Compute expected mean number of deaths under the model
-  mu[mu <= 1e-12] <- 1e-12   # Avoid log(0)
   
-  # Negative log-likelihood
-  # Ignoring constants (log(y!)) because it is do not depend on parameters
-  nll <- sum(mu - y * log(mu))
+  # Poisson log-likelihood 
+  ll <- sum(dpois(y,mu,log = TRUE))
   
   # Add smoothness penalty term
-  penalty <- 0.5 * lambda * crossprod(beta, S %*% beta)
-  return(nll + penalty)
+  penalty <- lambda * sum(beta * (S %*% beta)) / 2
+  # Return negative penalized log-likelihood
+  -(ll - penalty)
 }
 
 
@@ -178,5 +177,6 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
