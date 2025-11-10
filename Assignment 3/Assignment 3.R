@@ -216,10 +216,24 @@ for (i in 1:length(lambda_seq)) {
   
   if (i %% 10 == 0) cat("  Progress:", i, "/", length(lambda_seq), "\n")
 }
+# Find optimal lambda
+idx_opt <- which.min(bic_values)
+lambda_opt <- lambda_seq[idx_opt]
+cat("\nOptimal lambda:", lambda_opt, "\n")
+cat("Optimal BIC:", bic_values[idx_opt], "\n")
+cat("Optimal EDF:", edf_values[idx_opt], "\n")
 
+# Plot BIC curve
+plot(log_lambda_seq, bic_values, type = "l", lwd = 2,
+     xlab = "log(lambda)", ylab = "BIC",
+     main = "BIC vs Smoothing Parameter")
+abline(v = log(lambda_opt), col = "red", lty = 2)
 
+# Refit with optimal lambda
+cat("\nRefitting with optimal lambda...\n")
+fit_opt <- optim(gamma_init, pnll, pnll_grad,
+                 lambda = lambda_opt, X = X, y = y, S = S,
+                 method = "BFGS", control = list(maxit = 1000))
 
-
-
-
-
+gamma_opt <- fit_opt$par
+beta_opt <- exp(gamma_opt)
