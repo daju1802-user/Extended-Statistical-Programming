@@ -191,7 +191,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
 
 
 # Grid search over log(lambda)
-log_lambda<- seq(-13, -7, length = 50)
+log_lambda <- seq(-13, -7, length = 50)
 lambda_seq <- exp(log_lambda)
 bic_values <- numeric(length(lambda_seq))
 edf_values <- numeric(length(lambda_seq))
@@ -224,7 +224,7 @@ cat("Optimal BIC:", bic_values[idx_opt], "\n")
 cat("Optimal EDF:", edf_values[idx_opt], "\n")
 
 # Plot BIC curve
-plot(log_lambda_seq, bic_values, type = "l", lwd = 2,
+plot(log_lambda, bic_values, type = "l", lwd = 2,
      xlab = "log(lambda)", ylab = "BIC",
      main = "BIC vs Smoothing Parameter")
 abline(v = log(lambda_opt), col = "red", lty = 2)
@@ -237,3 +237,4 @@ fit_opt <- optim(gamma_init, pnll, pnll_grad,
 
 gamma_opt <- fit_opt$par
 beta_opt <- exp(gamma_opt)
+
