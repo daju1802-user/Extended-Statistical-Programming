@@ -75,7 +75,9 @@ pnll <- function(gamma, y, X, S, lambda) {
 }
 
 
-penalized_grad <- function(gamma, y, X, S, lambda) {
+pnll_grad <- function(gamma, y, X, S, lambda) {
+## Compute the gradient of the penalized negative log-likelihood
+## for the Poisson deconvolution model estimating daily infections.
   beta <- exp(gamma) # Transform to positive scale
   mu <- as.vector(X %*% beta) # Expected deaths
 
@@ -201,6 +203,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
 
