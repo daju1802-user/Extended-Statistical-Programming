@@ -66,15 +66,21 @@ pnll <- function(gamma, y, X, S, lambda) {
 
 
 penalized_grad <- function(gamma, y, X, S, lambda) {
-  beta <- exp(gamma)
-  mu <- as.vector(X %*% beta)
-  mu[mu <= 1e-12] <- 1e-12
+  beta <- exp(gamma) # Transform to positive scale
+  mu <- as.vector(X %*% beta) # Expected deaths
+
+  # Gradient of log-likelihood w.r.t. gamma
+  # dl/dgamma = F, where F = diag(y/mu - 1) * X * diag(beta)
+  residual <- y / mu - 1  # residuals
+  F <- (residual * X) * rep(beta, each = length(y))  # Element-wise multiplication
+  dll_dgamma <- colSums(F)
+
+  # Gradient of penalty w.r.t. gamma
+  # dP/dgamma = diag(beta) * S * beta
+  dP_dgamma <- beta * (S %*% beta)
   
-  grad_ll <- t(X) %*% (1 - y / mu)  # Gradient log-likelihood
-  grad_pen <- lambda * (S %*% beta)  # Gradient penalty
-  
-  grad <- as.vector(beta * (grad_ll + grad_pen))  # Chain rule
-  return(grad)
+  # Return negative gradient
+  -(dll_dgamma - lambda * dP_dgamma)
 }
 
 # ---- Finite differencing test ----
@@ -177,6 +183,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
 
