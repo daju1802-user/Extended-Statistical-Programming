@@ -181,9 +181,19 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   H_lambda <- H_0 + lambda * S
   
   #trace(A,B) = sum(A * t(B)) A and B are square matrices
-  cholH <- chol(H_lambda)
-  Z <- backsolve(cholH, forwardsolve(t(cholH), H_0))
-  EDF <- sum(diag(Z))
+  #H_0 <-  t(X) %*% (X * w)
+  #Edf <- sum(diag(solve(H_lambda,H_0)))
+  #Using Cholesky decomposition will make solving this equation more efficient,
+  #but first, it's necessary to determine if the matrix satisfies the conditions for using this decomposition.
+  cholH <- try(chol(H_lambda), silent = TRUE)
+  if (inherits(cholH, "try-error")) {
+    # Rollback plan(traditional way)
+    EDF <- sum(diag(solve(H_lambda, H_0)))
+  } else {
+    # Avoid matrix inversion by using a two-step triangular decomposition method.
+    Z <- backsolve(cholH, forwardsolve(t(cholH), H_0))
+    EDF <- sum(diag(Z))
+  }
   # BIC
   BIC <- -2 * ll + log(n) * EDF
   list(BIC = BIC, EDF = EDF, ll = ll)
@@ -213,8 +223,7 @@ for (i in 1:length(lambda_seq)) {
   bic_info <- calc_bic(gamma_current, lambda_i, X, y, S)
   bic_values[i] <- bic_info$BIC
   edf_values[i] <- bic_info$EDF
-  
-  if (i %% 10 == 0) cat("  Progress:", i, "/", length(lambda_seq), "\n")
+
 }
 # Find optimal lambda
 idx_opt <- which.min(bic_values)
@@ -223,18 +232,12 @@ cat("\nOptimal lambda:", lambda_opt, "\n")
 cat("Optimal BIC:", bic_values[idx_opt], "\n")
 cat("Optimal EDF:", edf_values[idx_opt], "\n")
 
-# Plot BIC curve
-plot(log_lambda, bic_values, type = "l", lwd = 2,
-     xlab = "log(lambda)", ylab = "BIC",
-     main = "BIC vs Smoothing Parameter")
-abline(v = log(lambda_opt), col = "red", lty = 2)
-
 # Refit with optimal lambda
-cat("\nRefitting with optimal lambda...\n")
 fit_opt <- optim(gamma_init, pnll, pnll_grad,
                  lambda = lambda_opt, X = X, y = y, S = S,
                  method = "BFGS", control = list(maxit = 1000))
-
+#Back to function to find the optimal gamma and beta
 gamma_opt <- fit_opt$par
 beta_opt <- exp(gamma_opt)
+
 
