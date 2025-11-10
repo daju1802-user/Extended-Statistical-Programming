@@ -97,22 +97,24 @@ pnll_grad <- function(gamma, y, X, S, lambda) {
 
 # ---- Finite differencing test ----
 test_gradient <- function(gamma, y, X, S, lambda) {
-  # Analytic gradient
+## Test the correctness of the analytic gradient function by finite differencing.
+  # Analytic gradient from the implemented function
   grad_analytic <- pnll_grad(gamma, y, X, S, lambda)
   
   # Finite difference gradient
   eps <- 1e-7
   grad_fd <- numeric(length(gamma))
-  for (i in 1:length(gamma)) {
+  for (i in 1:length(gamma)) {  # loop over each parameter in gamma
     gamma_plus <- gamma
     gamma_plus[i] <- gamma[i] + eps
     gamma_minus <- gamma
     gamma_minus[i] <- gamma[i] - eps
+    # central difference formula
     grad_fd[i] <- (pnll(gamma_plus, y, X, S, lambda) - 
                      pnll(gamma_minus, y, X, S, lambda)) / (2 * eps)
   }
   
-  # Check agreement
+  # compare analytic vs numerical gradients
   max_diff <- max(abs(grad_analytic - grad_fd))
   cat("Max difference between analytic and finite difference gradient:", max_diff, "\n")
   
@@ -121,7 +123,6 @@ test_gradient <- function(gamma, y, X, S, lambda) {
 
 # Initialize gamma with small values (beta close to 1)
 gamma_init <- rep(0, K)
-
 # Test the gradient function
 test_gradient(gamma_init, y, X, S, lambda = 5e-5)
 
@@ -203,6 +204,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
 
