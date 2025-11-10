@@ -3,6 +3,10 @@ data <- read.table("engcov.txt", header = TRUE)
 t <- data$julian  # Day of year
 n <- length(y)  # Number of observations
 y <- data$nhs
+
+#============================================
+# Step 1: Create model matrices X_tilde, X, and penalty matrix S
+#============================================
 d <- 1:80
 edur <- 3.151
 sdur <- 0.469
@@ -56,6 +60,9 @@ X_tilde <- mats$X_tilde
 S <- mats$S
 head(X)
 
+#============================================
+# Step 2: Likelihood and gradient functions
+#============================================
 pnll <- function(gamma, y, X, S, lambda) {
 ## Computes the penalized negative log-likelihood and its gradient 
 ## for the Poisson deconvolution model used to estimate the daily infection curve f(t).
@@ -237,6 +244,7 @@ fit_opt <- optim(gamma_init, pnll, pnll_grad,
 #Back to function to find the optimal gamma and beta
 gamma_opt <- fit_opt$par
 beta_opt <- exp(gamma_opt)
+
 
 
 
