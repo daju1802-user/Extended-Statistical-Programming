@@ -11,32 +11,42 @@ pd <- pd / sum(pd)  # Normalize to probability distribution
 K <- 80  # Number of basis functions
 
 build_matrices <- function(t,k,pd){
+## Construct design matrices for the Poisson deconvolution model.
+## This function prepares the matrices required to estimate the infection curve f(t),
+## which is related to observed deaths through a convolution with the infection-to-death distribution.
   lower <- min(t) - 30
   upper <- max(t)
+  
+  # create a sequence of interior knots evenly spaced over the time range
   mid_squence <- seq(lower, upper, length.out = k-2)
   gap <- mid_squence[2] - mid_squence[1]
+
+  # extend the knots 3 steps beyond both ends to handle cubic splines
   knot <- c(
     seq(from = lower - 3*gap, to = lower - gap, length.out = 3),
     mid_squence,
     seq(from = upper + gap, to = upper + 3*gap, length.out = 3)
   )
-
-  X_tilde <- splineDesign(knot,lower:upper,outer.ok = TRUE) #outer.ok = TRUE
   
-  r <- nrow(X_tilde)
+  # construct the B-spline basis matrix between lower and upper
+  X_tilde <- splineDesign(knot,lower:upper,outer.ok = TRUE) #outer.ok = TRUE
+  r <- nrow(X_tilde) # number of time points in f(t) grid
 
   X <- matrix(0, n, ncol(X_tilde))
-  # Build X by convolution
+  # build X by summing contributions of past infections to each day's deaths
   for (i in 1:n) {
     max_j <- min(29 + i, length(pd))
+    # compute indices of infection times corresponding to death day
     idx <- t[i] - (1:max_j) - lower + 1
     valid <- which(idx >= 1 & idx <= r)
+
+    # if valid infections exist, add weighted basis function contributions
     if (length(valid) > 0) {
       X[i, ] <- colSums(X_tilde[idx[valid], , drop = FALSE] * pd[valid])
     }
   }
-
-  S <- crossprod(diff(diag(k),diff=2))
+  
+  S <- crossprod(diff(diag(k),diff=2)) # construct penalty matrix
   return(list(X_tilde=X_tilde,S=S,X=X,t_infection = lower:upper))
 }
 
@@ -191,6 +201,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
 
