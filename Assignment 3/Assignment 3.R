@@ -84,26 +84,34 @@ penalized_grad <- function(gamma, y, X, S, lambda) {
 }
 
 # ---- Finite differencing test ----
-# Choose initial gamma
-mats <- create_design_matrices(t_death, K = 80)
-gamma0 <- rep(0, ncol(mats$X))
-lambda <- 5e-5
+test_gradient <- function(gamma, y, X, S, lambda) {
+  # Analytic gradient
+  grad_analytic <- pnll_grad(gamma, y, X, S, lambda)
+  
+  # Finite difference gradient
+  eps <- 1e-7
+  grad_fd <- numeric(length(gamma))
+  for (i in 1:length(gamma)) {
+    gamma_plus <- gamma
+    gamma_plus[i] <- gamma[i] + eps
+    gamma_minus <- gamma
+    gamma_minus[i] <- gamma[i] - eps
+    grad_fd[i] <- (pnll(gamma_plus, y, X, S, lambda) - 
+                     pnll(gamma_minus, y, X, S, lambda)) / (2 * eps)
+  }
+  
+  # Check agreement
+  max_diff <- max(abs(grad_analytic - grad_fd))
+  cat("Max difference between analytic and finite difference gradient:", max_diff, "\n")
+  
+  invisible(max_diff < 1e-4)  # Should be very small
+}
 
-# Analytical gradient
-g_analytical <- penalized_grad(gamma0, y, mats$X, mats$S, lambda)
+# Initialize gamma with small values (beta close to 1)
+gamma_init <- rep(0, K)
 
-# Numerical gradient (finite differencing)
-eps <- 1e-6
-g_numeric <- sapply(1:length(gamma0), function(k) {
-  gp <- gamma0; gp[k] <- gp[k] + eps
-  gm <- gamma0; gm[k] <- gm[k] - eps
-  (penalized_nll(gp, y, mats$X, mats$S, lambda) -
-      penalized_nll(gm, y, mats$X, mats$S, lambda)) / (2 * eps)
-})
-
-# Compare
-diff <- max(abs(g_analytical - g_numeric))
-cat("Maximum absolute difference between analytic and numeric gradients:", diff, "\n")
+# Test the gradient function
+test_gradient(gamma_init, y, X, S, lambda = 5e-5)
 
 
 
@@ -183,6 +191,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
+
 
 
 
