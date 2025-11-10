@@ -166,45 +166,56 @@ text(min(t_death), max(f_hat)*0.9, "Deaths start", pos = 4, cex = 0.8)
 
 ## ---- Q4: Grid search for optimal lambda  ----
 
-n <- length(y)
-log_lambda_seq <- seq(-13, -7, length.out = 50)
-lambda_seq <- exp(log_lambda_seq)
-gamma_init <- rep(0, ncol(mats$X))
-
-## Define helper function for one λ
 # Function to calculate BIC
 calc_bic <- function(gamma, lambda, X, y, S) {
   beta <- exp(gamma)
   mu <- as.vector(X %*% beta)
   
   # Log-likelihood (without penalty)
-  ll <- sum(y * log(mu) - mu)
+  ll <- sum(dpois(y,mu,log = TRUE))
   
   # Calculate Hessian matrices for EDF
   # H_lambda = X^T * W * X + lambda * S, where W = diag(y/mu^2)
-  W <- diag(as.vector(y / mu^2))
-  H_0 <- crossprod(X, X * w)
+  W <- as.vector(y / mu^2)
+  H_0 = crossprod(X, X * W)
   H_lambda <- H_0 + lambda * S
   
-  # Effective degrees of freedom
-  EDF <- sum(diag(solve(H_lambda) %*% H_0))
-  
-  cholH <- try(chol(H_lambda), silent = TRUE)
-  if (inherits(cholH, "try-error")) {
-    # Rollback plan
-    EDF <- sum(diag(solve(H_lambda, H_0)))
-  } else {
-    # Avoid matrix inversion by using a two-step triangular decomposition method.
-    Z <- backsolve(cholH, forwardsolve(t(cholH), H_0))
-    EDF <- sum(diag(Z))
-  }
-  
+  #trace(A,B) = sum(A * t(B)) A and B are square matrices
+  cholH <- chol(H_lambda)
+  Z <- backsolve(cholH, forwardsolve(t(cholH), H_0))
+  EDF <- sum(diag(Z))
   # BIC
   BIC <- -2 * ll + log(n) * EDF
-  
   list(BIC = BIC, EDF = EDF, ll = ll)
 }
 
+
+# Grid search over log(lambda)
+log_lambda<- seq(-13, -7, length = 50)
+lambda_seq <- exp(log_lambda)
+bic_values <- numeric(length(lambda_seq))
+edf_values <- numeric(length(lambda_seq))
+
+# Start from previous solution and update for each lambda
+gamma_current <- gamma_init
+
+for (i in 1:length(lambda_seq)) {
+  lambda_i <- lambda_seq[i]
+  
+  # Optimize for this lambda
+  fit_i <- optim(gamma_current, pnll, pnll_grad,
+                 lambda = lambda_i, X = X, y = y, S = S,
+                 method = "BFGS", control = list(maxit = 1000))
+  
+  gamma_current <- fit_i$par  # Use as starting point for next
+  
+  # Calculate BIC
+  bic_info <- calc_bic(gamma_current, lambda_i, X, y, S)
+  bic_values[i] <- bic_info$BIC
+  edf_values[i] <- bic_info$EDF
+  
+  if (i %% 10 == 0) cat("  Progress:", i, "/", length(lambda_seq), "\n")
+}
 
 
 
