@@ -130,38 +130,36 @@ test_gradient(gamma_init, y, X, S, lambda = 5e-5)
 
 #Q3
 ## ---- Optimize penalized likelihood ----
-fit <- optim(
-  par = gamma0,
-  fn = penalized_nll,
-  gr = penalized_grad,
-  y = y, X = mats$X, S = mats$S, lambda = lambda,
-  method = "BFGS",
-  control = list(maxit = 2000, trace = 1)
-)
+gamma_init <- rep(0, K)
+lambda <- 5e-5
+t_infection = mats$t_infection
+# Optimize
+fit_test <- optim(gamma_init, pnll, pnll_grad, 
+                  lambda = lambda, X = X, y = y, S = S,
+                  method = "BFGS", control = list(maxit = 1000))
+
 
 ## ---- Extract fitted parameters ----
-gamma_hat <- fit$par
+gamma_hat <- fit_test$par
 beta_hat <- exp(gamma_hat)
-mu_hat <- as.vector(mats$X %*% beta_hat)  # fitted daily deaths
-f_hat <- as.vector(mats$tilde_X %*% beta_hat)  # estimated infection curve
 
-## ---- Plot actual vs fitted daily deaths ----
-plot(t_death, y, type = "p", pch = 16, col = "grey40",
-     main = "Actual vs Fitted Daily Deaths",
-     xlab = "Day (Julian date)", ylab = "Daily deaths")
-lines(t_death, mu_hat, col = "red", lwd = 2)
-legend("topright", legend = c("Observed deaths", "Fitted deaths"),
-       col = c("grey40", "red"), lwd = c(NA, 2), pch = c(16, NA), bty = "n")
+# Calculate fitted values
+mu_hat <- as.vector(X %*% beta_hat) # fitted daily deaths
+f_hat <- as.vector(X_tilde %*% beta_hat) # estimated infection curve
 
-## ---- Plot estimated daily infection curve ----
-plot(mats$t_f, f_hat, type = "l", col = "blue", lwd = 2,
-     main = "Estimated Daily Infection Curve f(t)",
-     xlab = "Day (Julian date)", ylab = "Estimated infections")
 
-## add vertical line to show where death data starts
-abline(v = min(t_death), lty = 2, col = "grey60")
-text(min(t_death), max(f_hat)*0.9, "Deaths start", pos = 4, cex = 0.8)
-
+## ---- Plot the results ----
+par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
+plot(t, y, type = "p", pch = 16, col = "black",
+     xlab = "Day of year 2020", ylab = "Count",
+     main = "COVID-19 Deaths and Inferred Infections",
+     ylim = c(0, max(y, f_hat) * 1.1))
+lines(t, mu_hat, col = "red", lwd = 2)
+lines(t_infection, f_hat, col = "blue", lwd = 2)
+legend("topright", 
+       legend = c("Observed deaths", "Fitted deaths", "Inferred infections"),
+       col = c("black", "red", "blue"), 
+       pch = c(16, NA, NA), lty = c(NA, 1, 1), lwd = 2)
 
 
 ## ---- Q4: Grid search for optimal lambda  ----
@@ -239,5 +237,6 @@ fit_opt <- optim(gamma_init, pnll, pnll_grad,
 #Back to function to find the optimal gamma and beta
 gamma_opt <- fit_opt$par
 beta_opt <- exp(gamma_opt)
+
 
 
