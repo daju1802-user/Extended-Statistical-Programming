@@ -1,3 +1,15 @@
+## This code implements a smooth deconvolution model that reconstructs the daily infection trend 
+## from reported COVID-19 deaths in hospitals.
+## The model accounts for the infection-to-death delay distribution and 
+## reconstructs the latent infection curve f(t) using a B-spline representation.
+## By comparing model fits across a range of smoothing parameters and quantifying uncertainty through 
+## non-parametric bootstrap resampling, we obtain robust estimates of the underlying infection dynamics along with confidence intervals.
+## The analysis proceeds through four key computational stages: model specification and design matrix construction, 
+## penalized likelihood optimization with gradient-based methods, smoothing parameter selection via information criteria, 
+## and uncertainty quantification through bootstrap replication.
+## These results give insight into how infection levels changed over time and demonstrate a practical, 
+## data-driven approach for reconstructing infection dynamics from mortality data.
+
 library(splines)
 data <- read.table("engcov.txt", header = TRUE)
 t <- data$julian  # Day of year
@@ -415,3 +427,4 @@ bootstrap_results <- list(
 )
 
 cat("\nBootstrap analysis completed! Results saved in 'bootstrap_results'.\n")
+
