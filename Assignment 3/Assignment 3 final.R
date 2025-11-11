@@ -13,6 +13,20 @@
 ## These results give insight into how infection levels changed over time and demonstrate a practical, 
 ## data-driven approach for reconstructing infection dynamics from mortality data.
 
+#Contribution:
+#Xuyi Shi(34%): Established vector h, sorted out details and modeling ideas, and 
+#completed the "get.net" function part, providing ideas for the "nseir" function, 
+#and doing final checks and tests.
+
+#Chi Zhang(33%): Completed the part on the "nseir" function and checked the idea and 
+#organization of the function. Discuss ideas and final model comparison with teammates,
+#and added comments, and final checks.
+
+#Jiachen Guang(33%): Completed the drawing part, discussed the problem of comparing models, 
+#completed the code for this part, and provided subsequent comments through images, doing
+#the final check.
+
+
 library(splines)
 data <- read.table("engcov.txt", header = TRUE)
 t <- data$julian  # Day of year
@@ -430,5 +444,6 @@ bootstrap_results <- list(
 )
 
 cat("\nBootstrap analysis completed! Results saved in 'bootstrap_results'.\n")
+
 
 
