@@ -1,3 +1,6 @@
+#Group 6 :Xuyi Shi(S2796586), Chi Zhang(S2828433), Jiachen Guang(S2789777)
+#Repo Link: https://github.com/daju1802-user/Extended-Statistical-Programming.git
+
 ## This code implements a smooth deconvolution model that reconstructs the daily infection trend 
 ## from reported COVID-19 deaths in hospitals.
 ## The model accounts for the infection-to-death delay distribution and 
@@ -427,4 +430,5 @@ bootstrap_results <- list(
 )
 
 cat("\nBootstrap analysis completed! Results saved in 'bootstrap_results'.\n")
+
 
