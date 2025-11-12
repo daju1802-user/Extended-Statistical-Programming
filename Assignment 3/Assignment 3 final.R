@@ -1,4 +1,3 @@
-
 #Group 6 :Xuyi Shi(S2796586), Chi Zhang(S2828433), Jiachen Guang(S2789777)
 #Repo Link: https://github.com/daju1802-user/Extended-Statistical-Programming.git
 
@@ -15,17 +14,11 @@
 ## data-driven approach for reconstructing infection dynamics from mortality data.
 
 #Contribution:
-#Xuyi Shi(34%): Established vector h, sorted out details and modeling ideas, and 
-#completed the "get.net" function part, providing ideas for the "nseir" function, 
-#and doing final checks and tests.
+#Xuyi Shi(%): 
 
-#Chi Zhang(33%): Completed the part on the "nseir" function and checked the idea and 
-#organization of the function. Discuss ideas and final model comparison with teammates,
-#and added comments, and final checks.
+#Chi Zhang(%): 
 
-#Jiachen Guang(33%): Completed the drawing part, discussed the problem of comparing models, 
-#completed the code for this part, and provided subsequent comments through images, doing
-#the final check.
+#Jiachen Guang(%): 
 
 
 library(splines)
@@ -382,6 +375,7 @@ par(mar = c(5, 4, 4, 2) + 0.1)
 
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
+
 
 
 
