@@ -1,3 +1,4 @@
+
 #Group 6 :Xuyi Shi(S2796586), Chi Zhang(S2828433), Jiachen Guang(S2789777)
 #Repo Link: https://github.com/daju1802-user/Extended-Statistical-Programming.git
 
@@ -325,40 +326,39 @@ f_bootstrap_ci <- apply(bootstrap_f, 1, function(x) {
 f_lower <- f_bootstrap_ci[1, ]  # 95% CI lower bound (2.5% quantile)
 f_upper <- f_bootstrap_ci[2, ]  # 95% CI upper bound (97.5% quantile)
 
-# ==================== Q6: Final Plotting ====================
+# ==================== Q6: Combined Plot ====================
 
-# Set graphics parameters for two-panel plot
-par(mfrow = c(2, 1), mar = c(4, 4, 2, 2))
+# Set graphics parameters for single plot
+par(mar = c(5, 4, 4, 4))
 
-# Plot 1: Death data and model fit (top panel)
-plot(t, y, type = "p", pch = 16, col = "black", cex = 0.7,
-     main = "Daily Death Data and Model Fit",
-     xlab = "Day of year 2020", ylab = "Daily Deaths",
-     ylim = c(0, max(y) * 1.1))
+# Create empty plot with appropriate ranges
+plot_range_x <- range(c(t, infection_dates))
+plot_range_y <- range(c(0, max(y) * 1.1, max(f_upper) * 1.1))
 
-# Add model fit line
-mu_opt <- as.vector(X %*% beta_opt)
+# Create main plot frame
+plot(NA, type = "n", 
+     xlim = plot_range_x, ylim = c(0, max(y) * 1.1),
+     main = "Daily Deaths and Estimated Infections",
+     xlab = "Day of year 2020", 
+     ylab = "Daily Deaths")
+
+# Plot death data and model fit (left y-axis)
+points(t, y, pch = 16, col = "black", cex = 0.7)
 lines(t, mu_opt, col = "red", lwd = 2)
 
-legend("topright", 
-       legend = c("Observed deaths", "Fitted deaths"),
-       col = c("black", "red"), 
-       pch = c(16, NA), lwd = c(NA, 2),
-       bty = "n")
+# Add second y-axis for infections
+par(new = TRUE)
+plot(NA, type = "n", 
+     xlim = plot_range_x, 
+     ylim = c(0, max(f_upper) * 1.1),
+     axes = FALSE, xlab = "", ylab = "")
+axis(4, col = "blue", col.axis = "blue")
+mtext("Estimated Infections", side = 4, line = 3, col = "blue")
 
-# Plot 2: Estimated daily infection rate with confidence intervals (bottom panel)
-infection_dates <- mats$t_infection
-plot(infection_dates, f_hat_opt, type = "l", col = "blue", lwd = 2,
-     main = "Estimated Daily Infection Rate with 95% Confidence Intervals",
-     xlab = "Day of year 2020", ylab = "Estimated Infections",
-     ylim = c(0, max(f_upper) * 1.1))
-
-# Add confidence intervals as shaded area
+# Plot infection rate with confidence intervals (right y-axis)
 polygon(c(infection_dates, rev(infection_dates)),
         c(f_lower, rev(f_upper)),
         col = rgb(0, 0, 1, 0.2), border = NA)
-
-# Re-add central line for visibility over the shaded area
 lines(infection_dates, f_hat_opt, col = "blue", lwd = 2)
 
 # Add vertical line marking start of death data
@@ -368,19 +368,20 @@ text(death_start, max(f_upper) * 0.9,
      paste("Death Data Starts\n(Infection +", round(exp(edur)), "days)", sep = ""),
      pos = 2, cex = 0.8, col = "red")
 
+# Add legend
 legend("topright",
-       legend = c("Inferred infections", "95% Confidence Interval"),
-       col = c("blue", rgb(0, 0, 1, 0.3)),
-       lwd = c(2, 8), lty = c(1, 1),
+       legend = c("Observed deaths", "Fitted deaths", 
+                  "Inferred infections", "95% Confidence Interval"),
+       col = c("black", "red", "blue", rgb(0, 0, 1, 0.3)),
+       pch = c(16, NA, NA, NA),
+       lwd = c(NA, 2, 2, 8), lty = c(NA, 1, 1, 1),
        bty = "n")
 
 # Reset graphics parameters to default
-par(mfrow = c(1, 1))
-
+par(mar = c(5, 4, 4, 2) + 0.1)
 
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
-
 
 
 
