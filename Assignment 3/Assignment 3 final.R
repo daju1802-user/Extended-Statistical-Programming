@@ -183,7 +183,7 @@ f_hat <- as.vector(X_tilde %*% beta_hat) # estimated infection curve
 par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 plot(t, y, type = "p", pch = 16, col = "black",
      xlab = "Day of year 2020", ylab = "Count",
-     main = "COVID-19 Deaths and Inferred Infections",
+     main = "COVID-19 Deaths and Inferred Infections",xlim = c(range(t_infection)),
      ylim = c(0, max(y, f_hat) * 1.1))
 lines(t, mu_hat, col = "red", lwd = 2)
 lines(t_infection, f_hat, col = "blue", lwd = 2)
@@ -204,7 +204,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   mu <- as.vector(X %*% beta)
   
   # Log-likelihood (without penalty)
-  ll <- sum(y * log(mu) - mu)
+  ll <- sum(y * log(mu) - mu - lgamma(y+1))
   
   # Calculate Hessian matrices for EDF
   # H_lambda = X^T * W * X + lambda * S, where W = diag(y/mu^2)
@@ -236,7 +236,7 @@ bic_values <- numeric(length(lambda_seq))
 edf_values <- numeric(length(lambda_seq))
 
 # Start from previous solution and update for each lambda
-gamma_current <- gamma_init
+gamma_current <- gamma_hat
 
 for (i in 1:length(lambda_seq)) {
   lambda_i <- lambda_seq[i]
@@ -260,6 +260,13 @@ lambda_opt <- lambda_seq[idx_opt]
 cat("\nOptimal lambda:", lambda_opt, "\n")
 cat("Optimal BIC:", bic_values[idx_opt], "\n")
 cat("Optimal EDF:", edf_values[idx_opt], "\n")
+
+# Plot BIC curve
+plot(log_lambda, bic_values, type = "l", lwd = 2,
+     xlab = "log(lambda)", ylab = "BIC",
+     main = "BIC vs Smoothing Parameter")
+abline(v = log(lambda_opt), col = "red", lty = 2)
+
 
 # Refit with optimal lambda to get final parameters
 fit_opt <- optim(gamma_init, pnll, pnll_grad,
@@ -378,6 +385,7 @@ par(mar = c(5, 4, 4, 2) + 0.1)
 
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
+
 
 
 
