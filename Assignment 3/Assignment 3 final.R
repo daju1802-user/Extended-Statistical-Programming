@@ -197,6 +197,9 @@ legend("topright",
 
 # Function to calculate BIC
 calc_bic <- function(gamma, lambda, X, y, S) {
+  ##Calculate the Bayesian Information Criterion (BIC) for the Poisson deconvolution model,
+  ##used for selecting the smoothing parameter lambda. BIC balances model fit and complexity, 
+  ##helping to choose the optimal degree of smoothing.
   beta <- exp(gamma)
   mu <- as.vector(X %*% beta)
   
@@ -375,6 +378,7 @@ par(mar = c(5, 4, 4, 2) + 0.1)
 
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
+
 
 
 
