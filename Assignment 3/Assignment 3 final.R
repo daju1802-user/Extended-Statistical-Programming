@@ -93,7 +93,7 @@ head(X)
 #============================================
 # Step 2: Likelihood and gradient functions
 #============================================
-pnll <- function(gamma, y, X, S, lambda) {
+pnll <- function(gamma, y, X, S, lambda, w = rep(1, length(y))) {
   ## Computes the penalized negative log-likelihood and its gradient 
   ## for the Poisson deconvolution model used to estimate the daily infection curve f(t).
   ## The model assumes that observed daily deaths y_i follow a Poisson distribution
@@ -103,7 +103,7 @@ pnll <- function(gamma, y, X, S, lambda) {
   mu <- as.vector(X %*% beta)  # Compute expected mean number of deaths under the model
   
   # Poisson log-likelihood 
-  ll <- sum(dpois(y,mu,log = TRUE))
+  ll <- sum(w * (y * log(mu) - mu - lgamma(y+1))) # w: bootstrap weights (default all 1s)
   
   # Add smoothness penalty term (penalizes roughness in beta coefficients)
   penalty <- lambda * sum(beta * (S %*% beta)) / 2
@@ -112,7 +112,7 @@ pnll <- function(gamma, y, X, S, lambda) {
 }
 
 
-pnll_grad <- function(gamma, y, X, S, lambda) {
+pnll_grad <- function(gamma, y, X, S, lambda, w = rep(1, length(y))) {
   ## Compute the gradient of the penalized negative log-likelihood
   ## for the Poisson deconvolution model estimating daily infections.
   beta <- exp(gamma) # Transform to positive scale
@@ -120,7 +120,7 @@ pnll_grad <- function(gamma, y, X, S, lambda) {
   
   # Gradient of log-likelihood w.r.t. gamma
   # dl/dgamma = F, where F = diag(y/mu - 1) * X * diag(beta)
-  residual <- y / mu - 1  # Poisson residuals
+  residual <- w * (y / mu - 1)  # Poisson residuals with weight
   F <- (residual * X) * rep(beta, each = length(y))  # Element-wise multiplication
   dll_dgamma <- colSums(F)
   
@@ -207,7 +207,7 @@ calc_bic <- function(gamma, lambda, X, y, S) {
   mu <- as.vector(X %*% beta)
   
   # Log-likelihood (without penalty)
-  ll <- sum(dpois(y,mu,log = TRUE))
+  ll <- sum(y * log(mu) - mu)
   
   # Calculate Hessian matrices for EDF
   # H_lambda = X^T * W * X + lambda * S, where W = diag(y/mu^2)
@@ -275,39 +275,6 @@ beta_opt <- exp(gamma_opt)
 
 # ==================== Q5: Non-parametric Bootstrap ====================
 
-# Modify objective function to support weights for bootstrap
-pnll_weighted <- function(gamma, y, X, S, lambda, weights) {
-  ## Penalized negative log-likelihood function with weights
-  beta <- exp(gamma)
-  mu <- as.vector(X %*% beta)
-  
-  # Weighted Poisson log-likelihood (weights represent bootstrap frequencies)
-  ll <- sum(weights * dpois(y, mu, log = TRUE))
-  
-  # Smoothness penalty term (same as before)
-  penalty <- lambda * sum(beta * (S %*% beta)) / 2
-  
-  # Return negative penalized log-likelihood
-  -(ll - penalty)
-}
-
-pnll_grad_weighted <- function(gamma, y, X, S, lambda, weights) {
-  ## Gradient function with weights for bootstrap
-  beta <- exp(gamma)
-  mu <- as.vector(X %*% beta)
-  
-  # Weighted likelihood gradient
-  residual <- y / mu - 1
-  F_matrix <- (residual * X) * rep(beta, each = length(y))
-  dll_dgamma <- colSums(weights * F_matrix)
-  
-  # Penalty gradient (unchanged)
-  dP_dgamma <- beta * (S %*% beta)
-  
-  # Return negative gradient
-  -(dll_dgamma - lambda * dP_dgamma)
-}
-
 # Use optimal lambda for bootstrap (fixed at optimal value from Q4)
 lambda_fixed <- lambda_opt  
 n_bootstrap <- 200  # Number of bootstrap replicates
@@ -317,25 +284,21 @@ n_obs <- length(y)  # Number of observations
 bootstrap_f <- matrix(0, nrow = nrow(X_tilde), ncol = n_bootstrap)  # Infection curves
 bootstrap_beta <- matrix(0, nrow = K, ncol = n_bootstrap)  # Beta parameters
 
-# Progress bar setup for monitoring bootstrap progress
-cat("Starting bootstrap process...\n")
-pb <- txtProgressBar(min = 0, max = n_bootstrap, style = 3)
-
 # Use optimal solution as starting value for better convergence
 gamma_start <- gamma_opt
 
 # Bootstrap loop: generate 200 bootstrap samples
 for (b in 1:n_bootstrap) {
   # Generate bootstrap weights (frequency counts for resampled observations)
-  bootstrap_weights <- tabulate(sample(n_obs, replace = TRUE), n_obs)
+  wb <- tabulate(sample(n_obs, replace = TRUE), n_obs)
   
   # Optimize using weighted functions for this bootstrap sample
   fit_bootstrap <- optim(
     par = gamma_start,
-    fn = pnll_weighted,
-    gr = pnll_grad_weighted,
+    fn = pnll,
+    gr = pnll_grad,
     y = y, X = X, S = S, lambda = lambda_fixed,
-    weights = bootstrap_weights,
+    w = wb,
     method = "BFGS",
     control = list(maxit = 1000)
   )
@@ -348,17 +311,8 @@ for (b in 1:n_bootstrap) {
   bootstrap_beta[, b] <- beta_b
   bootstrap_f[, b] <- f_b
   
-  # Update progress bar
-  setTxtProgressBar(pb, b)
-  
-  # Update starting value every 50 iterations to avoid divergence
-  if (b %% 50 == 0) {
-    gamma_start <- gamma_b
-  }
 }
 
-close(pb)
-cat("Bootstrap completed!\n")
 
 # Calculate optimal fitted infection curve from original data
 f_hat_opt <- as.vector(X_tilde %*% beta_opt)  
@@ -423,27 +377,12 @@ legend("topright",
 # Reset graphics parameters to default
 par(mfrow = c(1, 1))
 
-# Output bootstrap results summary
-cat("\nBootstrap Results Summary:\n")
-cat("Bootstrap replicates:", n_bootstrap, "\n")
-cat("Lambda used:", lambda_fixed, "\n")
+
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
-cat("Infection curve length:", length(f_hat_opt), "days\n")
 
-# Save important results for future analysis
-bootstrap_results <- list(
-  lambda = lambda_fixed,
-  f_hat = f_hat_opt,
-  f_bootstrap = bootstrap_f,
-  f_ci = list(lower = f_lower, upper = f_upper),
-  infection_dates = infection_dates,
-  death_dates = t,
-  beta_opt = beta_opt,
-  gamma_opt = gamma_opt
-)
 
-cat("\nBootstrap analysis completed! Results saved in 'bootstrap_results'.\n")
+
 
 
 
