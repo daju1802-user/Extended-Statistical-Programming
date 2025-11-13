@@ -254,10 +254,10 @@ for (i in 1:length(lambda_seq)) {
                  lambda = lambda_i, X = X, y = y, S = S,
                  method = "BFGS", control = list(maxit = 1000))
   
-  gamma_current <- fit_i$par  # Use as starting point for next lambda
+  gamma <- fit_i$par 
   
   # Calculate BIC
-  bic_info <- calc_bic(gamma_current, lambda_i, X, y, S)
+  bic_info <- calc_bic(gamma, lambda_i, X, y, S)
   bic_values[i] <- bic_info$BIC
   edf_values[i] <- bic_info$EDF
   
@@ -278,7 +278,7 @@ abline(v = log(lambda_opt), col = "red", lty = 2)
 
 
 # Refit with optimal lambda to get final parameters
-fit_opt <- optim(gamma_init, pnll, pnll_grad,
+fit_opt <- optim(gamma_hat, pnll, pnll_grad,
                  lambda = lambda_opt, X = X, y = y, S = S,
                  method = "BFGS", control = list(maxit = 1000))
 # Extract optimal parameters
@@ -289,7 +289,6 @@ beta_opt <- exp(gamma_opt)
 # ============================================================================
 # Bootstrap for uncertainty estimation
 # ============================================================================
-
 # Use optimal lambda for bootstrap (fixed at optimal value from Q4)
 n_bootstrap <- 200  # Number of bootstrap replicates
 
@@ -310,8 +309,7 @@ for (b in 1:n_bootstrap) {
                          method = "BFGS",control = list(maxit = 1000))
   
   # Store results for this bootstrap sample
-  gamma_current <- fit_bootstrap$par  # warm start
-  beta_boot <- exp(gamma_current)
+  beta_boot <- exp(fit_bootstrap$par)
   f_b <- as.vector(X_tilde %*% beta_boot)  # Infection curve for this bootstrap
   
   bootstrap_f[, b] <- f_b
@@ -380,11 +378,10 @@ text(death_start, max(f_upper) * 0.9,
 # Add legend
 legend("topright",
        legend = c("Observed deaths", "Fitted deaths", 
-                  "Inferred infections", "95% Confidence Interval"),
+                  "Inferred infections", "95% CI"),
        col = c("black", "red", "blue", rgb(0, 0, 1, 0.3)),
        pch = c(16, NA, NA, NA),
-       lwd = c(NA, 2, 2, 8), lty = c(NA, 1, 1, 1),
-       bty = "n")
+       lwd = c(NA, 2, 2, 8), lty = c(NA, 1, 1, 1))
 
 # Reset graphics parameters to default
 par(mar = c(5, 4, 4, 2) + 0.1)
@@ -413,5 +410,7 @@ cat("Peak death time:",t[which.max(mu_opt)],"\n")
 #After the peak, both infections and deaths decline gradually, but small secondary fluctuations in the infection estimates appear later.
 #Overall, this visualization demonstrates the effectiveness of smooth deconvolution for inferring infection dynamics from mortality data, 
 #providing valuable insights into the epidemic's timeline.
+
+
 
 
