@@ -386,10 +386,12 @@ par(mar = c(5, 4, 4, 2) + 0.1)
 cat("Peak infection rate:", round(max(f_hat_opt), 2), "\n")
 cat("Peak infection time:", infection_dates[which.max(f_hat_opt)], "\n")
 
-
-
-
-
-
-
-
+# The plot visualizes the relationship between the observed daily deaths from COVID-19 and the estimated underlying daily infection counts inferred through the smooth deconvolution model.
+# On the left y-axis, the black dots represent the observed daily deaths reported by hospitals, while the red curve shows the fitted death counts predicted by the model.
+# On the right y-axis, the blue curve depicts the estimated daily infections, representing the reconstructed infection trajectory after adjusting for the infection-to-death delay distribution.       
+# The shaded blue band shows the 95% confidence interval. This interval reflects the uncertainty in the estimated infection curve due to sampling variation and model fitting.
+# The vertical red dotted line on the far left marks the starting point of the death data, approximately 23 days after the infection occurred.   
+# The peak of the inferred infection curve occurred on day 79, and the peak of the death curve occurred on day 99.
+# The inferred infection curve peaks earlier and higher than the death curve, which is expected because infections precede deaths by several weeks.
+# After the peak, both infections and deaths decline gradually, but small secondary fluctuations in the infection estimates appear later.
+# Overall, this visualization demonstrates the effectiveness of smooth deconvolution for inferring infection dynamics from mortality data, providing valuable insights into the epidemic's timeline.
